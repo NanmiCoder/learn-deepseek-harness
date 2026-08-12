@@ -17,5 +17,6 @@ export const groups: LessonGroup[] = [
   { id: "hands-on-stage", title: "动手", goal: "自己写一个插件，并且知道不生效时去哪查" },
   { id: "advanced", title: "进阶", goal: "上下文、出错重试、危险动作的确认" },
   { id: "put-together", title: "合起来", goal: "把前面各块接成一条能跑的链路" },
+  { id: "the-real-thing", title: "真货", goal: "看清真实 DeepSeek Harness 的骨架，以及 demo 走到哪为止" },
   { id: "real-world", title: "实战", goal: "写一个能真的装进 DSH 的插件" },
 ];

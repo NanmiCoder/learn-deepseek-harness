@@ -2,7 +2,7 @@ import type { Lesson } from "../tutorial/types";
 
 export const hostSeams: Lesson = {
   id: "host-seams",
-  index: "16",
+  index: "19",
   title: "host 面的三条接缝：工具、会话事件、HTTP 路由",
   summary: "往插件里塞三样东西",
   eyebrow: "实战",
