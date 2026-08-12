@@ -66,7 +66,7 @@ function tokenize(line: string, insideBlockComment: boolean): { tokens: Token[];
   return { tokens, stillInside: false };
 }
 
-export function CodePanel({ code }: { code: CodeBlock }) {
+export function CodePanel({ code, showMeta = true }: { code: CodeBlock; showMeta?: boolean }) {
   const lines = useMemo(() => {
     const raw = code.content.replace(/\n+$/, "").split("\n");
     let inside = false;
@@ -80,20 +80,22 @@ export function CodePanel({ code }: { code: CodeBlock }) {
   const highlight = new Set(code.highlight ?? []);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-col">
-      <div className="flex items-center gap-2 px-1 pb-2">
-        <FileCode aria-hidden="true" className="text-[var(--cyan-deep)]" size={13} weight="regular" />
-        <span className="truncate font-mono text-[10px] text-[var(--ink-3)]" title={code.source}>
-          {code.source}
-        </span>
-        {code.partial && (
-          <span className="shrink-0 rounded-md bg-[var(--amber-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--amber)]">
-            写到这一步的样子
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
+      {showMeta && (
+        <div className="flex items-center gap-2 px-1 pb-2">
+          <FileCode aria-hidden="true" className="text-[var(--teal)]" size={13} weight="regular" />
+          <span className="truncate font-mono text-[10px] text-[var(--ink-3)]" title={code.source}>
+            {code.source}
           </span>
-        )}
-      </div>
+          {code.partial && (
+            <span className="shrink-0 rounded-md bg-[var(--amber-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--amber)]">
+              写到这一步的样子
+            </span>
+          )}
+        </div>
+      )}
 
-      <div className="code-surface thin-scroll min-h-0 overflow-auto rounded-2xl py-2">
+      <div className="code-surface thin-scroll min-h-0 flex-1 overflow-auto rounded-[1.25rem] py-2">
         <pre className="font-mono text-[11px] leading-[1.72]">
           {lines.map((tokens, index) => (
             <div className="code-line" data-hl={highlight.has(index + 1)} key={index}>
@@ -110,10 +112,10 @@ export function CodePanel({ code }: { code: CodeBlock }) {
         </pre>
       </div>
 
-      <div className="mt-2.5 flex items-start gap-2 rounded-2xl bg-[var(--mint-wash)] px-3 py-2.5">
+      <div className="mt-2.5 flex items-start gap-2 rounded-[1.125rem] bg-[var(--cyan-wash)] px-3 py-2.5">
         <Lightbulb
           aria-hidden="true"
-          className="mt-0.5 shrink-0 text-[var(--mint-deep)]"
+          className="mt-0.5 shrink-0 text-[var(--teal)]"
           size={13}
           weight="regular"
         />
