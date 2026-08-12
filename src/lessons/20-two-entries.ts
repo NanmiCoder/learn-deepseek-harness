@@ -2,7 +2,7 @@ import type { Lesson } from "../tutorial/types";
 
 export const twoEntries: Lesson = {
   id: "two-entries",
-  index: "17",
+  index: "20",
   title: "一个包两个入口：浏览器那半怎么被找到",
   summary: "一个包的两个入口",
   eyebrow: "实战",

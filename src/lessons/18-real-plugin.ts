@@ -2,7 +2,7 @@ import type { Lesson } from "../tutorial/types";
 
 export const realPlugin: Lesson = {
   id: "real-plugin",
-  index: "15",
+  index: "18",
   title: "从 demo 插件到真实 DSH 插件",
   summary: "两套写法的对照",
   eyebrow: "实战",

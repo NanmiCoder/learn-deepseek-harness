@@ -13,9 +13,12 @@ import { failure } from "./11-failure";
 import { approvalBoundary } from "./12-approval";
 import { sessionLog } from "./13-session-log";
 import { multiAgent } from "./14-multi-agent";
-import { realPlugin } from "./15-real-plugin";
-import { hostSeams } from "./16-host-seams";
-import { twoEntries } from "./17-two-entries";
+import { realSkeleton } from "./15-real-skeleton";
+import { boot } from "./16-boot";
+import { swappable } from "./17-swappable";
+import { realPlugin } from "./18-real-plugin";
+import { hostSeams } from "./19-host-seams";
+import { twoEntries } from "./20-two-entries";
 
 /**
  * 课程按顺序排列，左侧目录和上一课/下一课都用这个顺序。
@@ -39,6 +42,9 @@ export const lessons: Lesson[] = [
   approvalBoundary,
   sessionLog,
   multiAgent,
+  realSkeleton,
+  boot,
+  swappable,
   realPlugin,
   hostSeams,
   twoEntries,

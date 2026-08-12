@@ -16,9 +16,9 @@ export const harnessBasics: Lesson = {
   eyebrow: "基础认知",
   group: "know",
   readingMinutes: 7,
-  oneLiner: "大模型只会输出文字。Harness 在外面替它动手，再把结果喂回去。",
-  analogy:
-    "把模型想成关在玻璃房里的专家。他能看资料、能说话，但手伸不出来。你说一句话，外面的助手把整段对话念给他听。他说「打开 3 号柜子」，助手真的去开，把东西递进去。他没有记忆，所以助手每次都从头念一遍。碰上「把柜子砸了」，助手会先扭头问你一句——这条规矩是你加的，不是他天生就会。这个助手就是 Harness。",
+  oneLiner: "一个 agent 拆开就两半：一半是模型，只会输出文字；剩下那一半全是 harness。",
+  positioning:
+    "先把名字说清。一个 agent 拆开只有两半：一半是模型，它能看、能说，但手伸不出来，说完就忘。剩下那一半全是 harness——把整段对话重新念给它听的那层、真去读文件删文件的那层、危险动作先问你一句的那层、决定这次装哪几件的那张单子。harness 不是某一个部件，是模型以外的所有东西的总称。这一节先看它最日常的那次运转：你说一句话，它让模型真的动起来。",
   concepts: [
     {
       term: "会话记录",
@@ -26,13 +26,13 @@ export const harnessBasics: Lesson = {
       source: "demo/mini-harness/plugins/session.ts · append()",
     },
     {
-      term: "工具调用",
-      plain: "模型只写得出工具名和参数。真去执行的是 Harness。",
-      source: "demo/mini-harness/loop.ts · runTool()",
+      term: "工具",
+      plain: "模型只写得出工具名和参数。真去读文件删文件的是 harness 里的工具。",
+      source: "demo/mini-harness/plugins/tools.ts",
     },
     {
-      term: "turn 与 step",
-      plain: "你说一句话是一个 turn。turn 里问模型一次是一个 step。",
+      term: "循环",
+      plain: "模型每要一次工具就多问一次，直到它不再要工具。这段转圈也是 harness 的一块。",
       source: "demo/mini-harness/loop.ts · runTurn()",
     },
     {
@@ -44,24 +44,24 @@ export const harnessBasics: Lesson = {
   stage: {
     nodes: [
       { id: "user", label: "用户", sub: "敲一句话", col: 0, row: 1, kind: "external" },
-      { id: "harness", label: "Harness", sub: "中间这一层", col: 1, row: 1, kind: "core" },
-      { id: "record", label: "会话记录", sub: "发生过的事都在", col: 1, row: 3, kind: "data" },
+      { id: "loop", label: "循环", sub: "harness 的一块", col: 1, row: 0, kind: "core" },
+      { id: "record", label: "会话记录", sub: "harness 的一块", col: 1, row: 2, kind: "data" },
+      { id: "approval", label: "权限确认", sub: "harness 的一块", col: 2, row: 2, kind: "plugin" },
       { id: "model", label: "大模型", sub: "只会输出文字", col: 2, row: 0, kind: "external" },
-      { id: "approval", label: "问你一句", sub: "危险动作才问", col: 2, row: 2, kind: "plugin" },
-      { id: "tool", label: "工具", sub: "真的去执行", col: 3, row: 1, kind: "plugin" },
+      { id: "tool", label: "工具", sub: "harness 的一块", col: 3, row: 1, kind: "plugin" },
       { id: "world", label: "真实世界", sub: "文件 命令 网络", col: 3, row: 3, kind: "external" },
     ],
     edges: [
-      { from: "user", to: "harness", label: "说一句" },
-      { from: "harness", to: "record", label: "记下来" },
-      { from: "record", to: "harness", label: "重念一遍" },
-      { from: "harness", to: "model", label: "整包发过去" },
-      { from: "model", to: "harness", label: "我要调工具" },
-      { from: "harness", to: "tool", label: "照着去做" },
+      { from: "user", to: "loop", label: "说一句" },
+      { from: "loop", to: "record", label: "记下来" },
+      { from: "record", to: "loop", label: "重念一遍" },
+      { from: "loop", to: "model", label: "整包发过去" },
+      { from: "model", to: "loop", label: "我要调工具" },
+      { from: "loop", to: "tool", label: "照着去做" },
       { from: "tool", to: "world", label: "真的动手" },
-      { from: "tool", to: "harness", label: "结果回来" },
-      { from: "harness", to: "approval", label: "先问一句" },
-      { from: "approval", to: "harness", label: "你说不行" },
+      { from: "tool", to: "loop", label: "结果回来" },
+      { from: "loop", to: "approval", label: "先问一句" },
+      { from: "approval", to: "loop", label: "你说不行" },
     ],
   },
   steps: [
@@ -69,9 +69,9 @@ export const harnessBasics: Lesson = {
       id: "s1",
       title: "你说了一句话",
       detail:
-        "你的话不会直接飞到模型那里。Harness 先把它记下来。一次用户输入就是一个 turn，这个 turn 从这两条记录开始。",
-      activeNodes: ["user", "harness", "record"],
-      activeEdges: ["user->harness", "harness->record"],
+        "你的话不会直接飞到模型那里。先被记下来——这是 harness 里「会话记录」那一块干的活。一次用户输入就是一个 turn，这个 turn 从这两条记录开始。",
+      activeNodes: ["user", "loop", "record"],
+      activeEdges: ["user->loop", "loop->record"],
       log: [
         { kind: "io", text: "用户输入：看看 notes.txt 写了什么，然后把它删掉" },
         { kind: "event", text: "session/create { session=s1, parent=无, depth=0 }" },
@@ -95,8 +95,8 @@ export const harnessBasics: Lesson = {
       title: "把整段话念给模型",
       detail:
         "模型不记得上一句。每问一次都要重新拼一包完整输入：系统提示、工具清单、整段对话。问模型一次，就是一个 step。",
-      activeNodes: ["harness", "record", "model"],
-      activeEdges: ["record->harness", "harness->model"],
+      activeNodes: ["loop", "record", "model"],
+      activeEdges: ["record->loop", "loop->model"],
       log: [
         { kind: "state", text: "session/append { session=s1, seq=2, type=step/start }" },
         { kind: "call", text: "model/request { round=1, toolCount=5, messageCount=1 }" },
@@ -118,8 +118,8 @@ export const harnessBasics: Lesson = {
       title: "模型只回了文字",
       detail:
         "模型回了一句话：我要调 read_file，参数是 notes.txt。注意，它只是写下了这句话。文件一个字都没被读。",
-      activeNodes: ["model", "harness"],
-      activeEdges: ["model->harness"],
+      activeNodes: ["model", "loop"],
+      activeEdges: ["model->loop"],
       log: [
         { kind: "state", text: "session/append { session=s1, seq=3, type=assistant }" },
         { kind: "state", text: "这条消息带着一个 toolCall：{ name: read_file, args: { path: notes.txt } }" },
@@ -147,9 +147,9 @@ export interface ToolCall {
       id: "s4",
       title: "真去动手的是它",
       detail:
-        "Harness 拿这个名字去工具表里找。找到了就跑那个函数。倒数第三行才是真的动手：文件被读出来了。",
-      activeNodes: ["harness", "tool", "world"],
-      activeEdges: ["harness->tool", "tool->world"],
+        "循环拿这个名字去工具表里找。找到了就跑那个函数。倒数第三行才是真的动手：文件被读出来了。",
+      activeNodes: ["loop", "tool", "world"],
+      activeEdges: ["loop->tool", "tool->world"],
       log: [
         { kind: "call", text: 'tool/decide { name=read_file, args={"path":"notes.txt"} }' },
         { kind: "call", text: 'tool/before { name=read_file, args={"path":"notes.txt"} }' },
@@ -175,8 +175,8 @@ export interface ToolCall {
       title: "结果塞回去再问",
       detail:
         "读到的内容记成新的一条。然后回到上一步，把变长的对话重新拼一包再问一次。这次带过去 3 条。",
-      activeNodes: ["tool", "harness", "record", "model"],
-      activeEdges: ["tool->harness", "harness->record", "harness->model"],
+      activeNodes: ["tool", "loop", "record", "model"],
+      activeEdges: ["tool->loop", "loop->record", "loop->model"],
       log: [
         { kind: "state", text: "session/append { session=s1, seq=4, type=tool }" },
         { kind: "state", text: "session/append { session=s1, seq=5, type=step/start }" },
@@ -199,8 +199,8 @@ export interface ToolCall {
       title: "危险的先问你",
       detail:
         "第 3 步模型要删文件。这个工具标了危险，动手前先问你一句。你说不行，拒绝理由就当成工具结果还给模型。",
-      activeNodes: ["harness", "approval", "record"],
-      activeEdges: ["harness->approval", "approval->harness"],
+      activeNodes: ["loop", "approval", "record"],
+      activeEdges: ["loop->approval", "approval->loop"],
       log: [
         { kind: "call", text: 'tool/decide { name=delete_file, args={"path":"notes.txt"} }' },
         { kind: "io", text: "approval/ask { name=delete_file }" },
@@ -224,8 +224,8 @@ export interface ToolCall {
       title: "模型不要工具了",
       detail:
         "第 4 步模型只回了一句话，没再要工具。循环从这里返回，这个 turn 结束。这是正常出口，下面还有一个兜底出口。",
-      activeNodes: ["model", "harness", "user"],
-      activeEdges: ["model->harness"],
+      activeNodes: ["model", "loop", "user"],
+      activeEdges: ["model->loop"],
       log: [
         { kind: "state", text: "session/append { session=s1, seq=11, type=step/start }" },
         { kind: "call", text: "model/request { round=4, toolCount=5, messageCount=7 }" },
@@ -306,7 +306,7 @@ export interface ToolCall {
     {
       question: "demo 里你只说了一句话，模型却被问了 4 次。为什么？",
       options: [
-        "Harness 怕模型答错，同一个问题重复问几遍",
+        "harness 怕模型答错，同一个问题重复问几遍",
         "模型每要一次工具，就得把结果拼进去重新问一次",
         "轮数写死是 4，每次都问满 4 轮",
       ],
@@ -323,7 +323,7 @@ export interface ToolCall {
       question: "模型说出「我要删 notes.txt」的那一刻，文件被删了吗？",
       options: [
         "删了，模型说出口就等于执行",
-        "没删。那只是一段文字，要 Harness 找到工具、真去跑那个函数才会删",
+        "没删。那只是一段文字，要 harness 里的工具找到、真去跑那个函数才会删",
         "没删，但模型会自己重试直到删掉",
       ],
       answer: 1,
@@ -337,5 +337,5 @@ export interface ToolCall {
     },
   ],
   bridge:
-    "念对话、执行工具、把结果存回去。这三件事任何 Harness 都得做。审批是可选的——demo 里删掉它，别的照跑。下一节看一个具体的：DeepSeek Harness 是什么，跟 Claude Code 什么关系。",
+    "记对话、执行工具、决定这次装哪几件——这些都是 harness 的活，模型一概不管。这是 harness 这个词在任何一个 agent 框架里的意思。下一节落到具体的一个：DeepSeek 做的这套 harness 叫什么、跟 Claude Code 那种有什么区别。",
 };
