@@ -207,6 +207,11 @@ const base: Layer = {
       right:
         "不是。它们都是事件，由一个叫 logger 的插件统一打成一行。demo/mini-harness/loop.ts 里一句打印都没有，它只负责发事件。把 logger 从清单里删掉，demo 照样跑完，只是你什么都看不见。",
     },
+    {
+      wrong: "跑通了这个 demo，就等于跑通了 DeepSeek Harness。",
+      right:
+        "差得远。这个 demo 一千行出头，你能读完；真实那套有几十个包，还带落盘、遥测、沙箱、压缩。它俩的价值不一样：demo 用来把结构看清楚，真货用来干活。结构是同一套，规模差着量级——第 15 节会把两边摆一起对照。",
+    },
   ],
   takeaways: [
     {

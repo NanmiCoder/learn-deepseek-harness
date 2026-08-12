@@ -294,7 +294,7 @@ for (const plugin of standard.use) kernel.use(plugin, standard.config[plugin.nam
     {
       wrong: "学会这个，就会写 DeepSeek Harness 的插件了。",
       right:
-        "形状不一样。你写的是一个对象字面量，字段叫 name、needs、setup。真实 DSH 插件是一组模块级的命名导出：装载函数叫 apply，依赖声明叫 inject，配置要单独声明一个 Config。骨架是同一套——声明要用什么、装载时跑一次、走的时候收干净——只有名字那一项照搬，别的都换了名字。第 15 节把这几处一条条对上。",
+        "形状不一样。你写的是一个对象字面量，字段叫 name、needs、setup。真实 DSH 插件是一组模块级的命名导出：装载函数叫 apply，依赖声明叫 inject，配置要单独声明一个 Config。骨架是同一套——声明要用什么、装载时跑一次、走的时候收干净——只有名字那一项照搬，别的都换了名字。第 18 节把这几处一条条对上。",
     },
     {
       wrong: "setup 里得先判断一下 tools 在不在，免得取不到。",
@@ -306,11 +306,16 @@ for (const plugin of standard.use) kernel.use(plugin, standard.config[plugin.nam
       right:
         "只撤销记过账的：ctx.provide 挂的服务、ctx.on 挂的监听、ctx.effect 交的清理函数。这个 demo 的 tools.register 没登记撤销动作，所以 tool-count 拆掉之后，把工具表打出来还能看到 count_files 在里面。想让它一起走，得由 tools 那边先提供一个撤销的口子。",
     },
+    {
+      wrong: "照这个写法，我就能写真实 DeepSeek Harness 的插件了。",
+      right:
+        "形状不一样。demo 的插件是一个对象字面量，三个字段；真实那套是一个模块，四个平铺的命名导出，还多一个配置的声明。概念对得上——都是声明依赖、装载时干活——但字段名和写法都得换。第 18 节把两边六行一行行对着讲。",
+    },
   ],
   takeaways: [
     {
       title: "你刚写的，和真实 DSH 插件差在哪",
-      intro: "同一套骨架，三处不一样。第 15 节会把它们一条条对上。",
+      intro: "同一套骨架，三处不一样。第 18 节会把它们一条条对上。",
       items: [
         {
           label: "形状",
@@ -411,5 +416,5 @@ for (const plugin of standard.use) kernel.use(plugin, standard.config[plugin.nam
     },
   ],
   bridge:
-    "你这个插件跑通了。下一节反过来：改完存盘、跑一遍，什么都没发生——先学会三步之内分清是没装上、没触发，还是触发了你看不见。至于你刚写的这个形状和真实 DSH 插件差在哪，第 15 节一条条对上。",
+    "你这个插件跑通了。下一节反过来：改完存盘、跑一遍，什么都没发生——先学会三步之内分清是没装上、没触发，还是触发了你看不见。至于你刚写的这个形状和真实 DSH 插件差在哪，第 18 节一条条对上。",
 };

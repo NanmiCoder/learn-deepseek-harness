@@ -236,6 +236,11 @@ return reply.text`,
       right:
         "两码事。demo 里子 Agent 的工具表是空的，那行 toolCount=0 就是这么来的。空表是 demo/mini-harness/plugins/subagent.ts 里写死的一行 tools: []，跟日志分不分开没关系。看不见一段对话，和碰不到一个工具，是两套机制，别拿前者当后者用。",
     },
+    {
+      wrong: "派活就是开一个新会话，跑完把结果带回来。",
+      right:
+        "这是其中一种派法。真实那套里还能从当前对话的某个位置分叉出去，也能把活交给另一个产品去做；有的子 agent 跑完就结束，有的能存下来接着聊。父子关系和隔了几层都要落盘，重启之后还在。demo 演示的是最基础的那种：全新开一份。",
+    },
   ],
   takeaways: [
     {
@@ -340,5 +345,5 @@ return reply.text`,
   evidence:
     "运行记录来自 npm run demo 第二轮；真实 DSH 的分活方式和并发判定，出自 demo/mini-harness/README.md 末尾的差距表和 DeepSeek Harness 自带文档",
   bridge:
-    "到这里，demo/mini-harness 那台最小 Harness 每一块都拆过一遍了。可你写的插件是往 demo/mini-harness/main.ts 里加一行装上的，真实 DSH 的插件不长这样，也不是这么装的。下一节把两边的写法一条条对上。",
+    "到这里，demo 那台最小 Harness 每一块都拆过一遍了：循环、会话、工具、审批、装配单、子 Agent。它能跑、能改、你也读得完。接下来换个对象——真实的 DeepSeek Harness 骨架长什么样，跟你手上这台差在哪。先从最要紧的一条线看起：模型到底看得见什么。",
 };
