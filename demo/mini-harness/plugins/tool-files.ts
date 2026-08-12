@@ -35,6 +35,19 @@ export const toolFiles: Plugin = {
     })
 
     tools.register({
+      name: 'stat_file',
+      describe: '看一个文件有多大',
+      params: { path: '文件路径' },
+      async run(args) {
+        const text = workspace.get(args.path)
+        // 故意抛异常，不返回错误字符串。
+        // 工具是别人写的代码，它想抛就抛——循环得扛得住这件事。
+        if (text === undefined) throw new Error(`打不开 ${args.path}`)
+        return `${args.path} 有 ${text.length} 个字`
+      },
+    })
+
+    tools.register({
       name: 'delete_file',
       describe: '删掉一个文件',
       params: { path: '文件路径' },

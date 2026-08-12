@@ -81,15 +81,24 @@ export function CodePanel({ code, showMeta = true }: { code: CodeBlock; showMeta
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col">
-      {showMeta && (
+      {/*
+        showMeta 关掉的是「来源那一行」——代码抽屉自己的标题已经显示了 source，
+        不需要重复。但 partial 是警告不是元数据：它告诉读者这段代码是半成品，
+        照抄下去跑不起来。所以它不跟着 showMeta 一起关。
+      */}
+      {(showMeta || code.partial) && (
         <div className="flex items-center gap-2 px-1 pb-2">
-          <FileCode aria-hidden="true" className="text-[var(--teal)]" size={13} weight="regular" />
-          <span className="truncate font-mono text-[10px] text-[var(--ink-3)]" title={code.source}>
-            {code.source}
-          </span>
+          {showMeta && (
+            <>
+              <FileCode aria-hidden="true" className="text-[var(--teal)]" size={13} weight="regular" />
+              <span className="truncate font-mono text-[10px] text-[var(--ink-3)]" title={code.source}>
+                {code.source}
+              </span>
+            </>
+          )}
           {code.partial && (
             <span className="shrink-0 rounded-md bg-[var(--amber-soft)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--amber)]">
-              写到这一步的样子
+              写到这一步的样子，不是完整文件
             </span>
           )}
         </div>

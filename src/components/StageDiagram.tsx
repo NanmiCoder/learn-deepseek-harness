@@ -34,9 +34,27 @@ const IDLE = {
   kind: "var(--node-idle-kind)",
 };
 
-function nodeBox(node: StageNode, topPad = PAD) {
-  const x = PAD + node.col * (NODE_W + GAP_X);
-  const y = topPad + node.row * (NODE_H + GAP_Y);
+/**
+ * 节点画在哪一格。
+ *
+ * 窄屏优先用 mobileCol/mobileRow——4 列的横版图压进手机宽度会缩到看不清。
+ * 没填就退回 col/row，行为和宽屏一致。
+ */
+export function cellOf(node: StageNode, narrow: boolean) {
+  return narrow
+    ? { col: node.mobileCol ?? node.col, row: node.mobileRow ?? node.row }
+    : { col: node.col, row: node.row };
+}
+
+/** 这张图有没有给窄屏准备过竖版坐标 */
+export function hasMobileCells(nodes: StageNode[]): boolean {
+  return nodes.some((node) => node.mobileCol !== undefined);
+}
+
+function nodeBox(node: StageNode, topPad = PAD, narrow = false) {
+  const cell = cellOf(node, narrow);
+  const x = PAD + cell.col * (NODE_W + GAP_X);
+  const y = topPad + cell.row * (NODE_H + GAP_Y);
   return { x, y, cx: x + NODE_W / 2, cy: y + NODE_H / 2 };
 }
 
@@ -52,9 +70,9 @@ function fitFontSize(text: string, maxWidth: number, base: number, floor: number
   return Math.max(floor, base * (maxWidth / natural));
 }
 
-function edgeGeometry(from: StageNode, to: StageNode, bow: number, topPad: number) {
-  const a = nodeBox(from, topPad);
-  const b = nodeBox(to, topPad);
+function edgeGeometry(from: StageNode, to: StageNode, bow: number, topPad: number, narrow: boolean) {
+  const a = nodeBox(from, topPad, narrow);
+  const b = nodeBox(to, topPad, narrow);
   const dx = b.cx - a.cx;
   const dy = b.cy - a.cy;
 
@@ -102,6 +120,7 @@ export function StageDiagram({
   frameKey,
   caption,
   columnLabels,
+  narrow = false,
 }: {
   nodes: StageNode[];
   edges: StageEdge[];
@@ -114,11 +133,12 @@ export function StageDiagram({
   frameKey: string;
   caption: string;
   columnLabels?: string[];
+  narrow?: boolean;
 }) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
-  const maxCol = Math.max(...nodes.map((node) => node.col));
-  const maxRow = Math.max(...nodes.map((node) => node.row));
-  const topPad = columnLabels?.length ? 58 : PAD;
+  const maxCol = Math.max(...nodes.map((node) => cellOf(node, narrow).col));
+  const maxRow = Math.max(...nodes.map((node) => cellOf(node, narrow).row));
+  const topPad = !narrow && columnLabels?.length ? 58 : PAD;
   const width = PAD * 2 + (maxCol + 1) * NODE_W + maxCol * GAP_X;
   const height = topPad + PAD + (maxRow + 1) * NODE_H + maxRow * GAP_Y + 22;
   const present = new Set(edges.map((edge) => `${edge.from}->${edge.to}`));
@@ -139,16 +159,21 @@ export function StageDiagram({
         </marker>
       </defs>
 
-      {columnLabels?.slice(0, maxCol + 1).map((label, index) => {
+      {!narrow && columnLabels?.slice(0, maxCol + 1).map((label, index) => {
         const x = PAD + index * (NODE_W + GAP_X);
+        // 这一列当前有没有露出来的节点。没有的话整条泳道压淡，
+        // 不然会剩一个跟节点一样大的空框，读者以为是渲染坏了。
+        const laneLive = nodes.some((node) => node.col === index && revealedNodeSet.has(node.id));
         return (
           <g key={label}>
             <rect
               fill="var(--diagram-lane-fill)"
+              opacity={laneLive ? 1 : 0.45}
               height={height - 38}
               rx="18"
               stroke="var(--diagram-lane-stroke)"
               strokeDasharray="3 5"
+              strokeOpacity={0.9}
               width={NODE_W + 20}
               x={x - 10}
               y="30"
@@ -179,7 +204,7 @@ export function StageDiagram({
         if (!revealed) return null;
         const live = currentEdgeSet.has(key);
         const paired = present.has(`${edge.to}->${edge.from}`);
-        const d = edgeGeometry(from, to, paired ? 1 : 0, topPad);
+        const d = edgeGeometry(from, to, paired ? 1 : 0, topPad, narrow);
 
         return (
           <motion.g
@@ -209,7 +234,7 @@ export function StageDiagram({
       })}
 
       {nodes.map((node) => {
-        const box = nodeBox(node, topPad);
+        const box = nodeBox(node, topPad, narrow);
         const revealed = revealedNodeSet.has(node.id);
         if (!revealed) return null;
         const live = currentNodeSet.has(node.id);
@@ -218,7 +243,7 @@ export function StageDiagram({
 
         return (
           <motion.g
-            animate={{ opacity: live ? 1 : mode === "overview" ? 0.94 : 0.62, scale: 1 }}
+            animate={{ opacity: live ? 1 : mode === "overview" ? 0.96 : 0.78, scale: 1 }}
             initial={entering ? { opacity: 0, scale: 0.94 } : false}
             key={node.id}
             style={{ originX: `${box.cx}px`, originY: `${box.cy}px` }}
@@ -249,14 +274,14 @@ export function StageDiagram({
               x={box.x}
               y={box.y}
             />
-            <text fill={live ? tone.sub : IDLE.kind} fontSize="9" fontWeight="600" letterSpacing="1.2" textAnchor="middle" x={box.cx} y={box.y + 17}>
+            <text fill={live ? tone.sub : IDLE.kind} fontSize="11" fontWeight="700" letterSpacing="0.8" textAnchor="middle" x={box.cx} y={box.y + 18}>
               {node.kindLabel ?? KIND_LABEL[node.kind]}
             </text>
-            <text fill={tone.text} fontSize={fitFontSize(node.label, NODE_W - 24, 14, 10)} fontWeight="600" textAnchor="middle" x={box.cx} y={box.cy + 5}>
+            <text fill={tone.text} fontSize={fitFontSize(node.label, NODE_W - 22, 15, 11.5)} fontWeight="600" textAnchor="middle" x={box.cx} y={box.cy + 4}>
               {node.label}
             </text>
             {node.sub && (
-              <text fill={tone.sub} fontSize={fitFontSize(node.sub, NODE_W - 20, 10, 7.5)} textAnchor="middle" x={box.cx} y={box.y + NODE_H - 12}>
+              <text fill={tone.sub} fontSize={fitFontSize(node.sub, NODE_W - 18, 12, 10)} textAnchor="middle" x={box.cx} y={box.y + NODE_H - 12}>
                 {node.sub}
               </text>
             )}

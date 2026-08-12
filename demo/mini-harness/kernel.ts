@@ -6,15 +6,24 @@
  *   2. 谁在等什么能力（依赖）
  *   3. 拆掉一个插件时，怎么把它留下的东西收干净（作用域）
  *
- * 整个文件不到 120 行，全部功能就这些。真实框架做的事更多，
- * 但骨架就是这个样子。
+ * 就这三件事，没有别的。真实框架做得更多，但骨架就是这个样子。
+ * 有多大自己数：wc -l demo/mini-harness/kernel.ts。写死的行数迟早会过期。
  */
 
 /** 清理函数。插件被拆掉时会挨个调用。 */
 export type Cleanup = () => void
 
-/** 事件监听器 */
+/** 事件监听器：只是被通知一声，改不了什么 */
 export type Listener = (payload: unknown) => void
+
+/**
+ * 环绕式监听器。
+ *
+ * 和普通监听器的区别只有一个：它多拿到一个 next。
+ * 调 next(值) 就把值交给下一个人；不调 next 直接返回，后面的人就都不跑了。
+ * 「拦下一次工具调用」就是这么实现的。
+ */
+export type Wrapper = (value: unknown, next: (value: unknown) => unknown) => unknown
 
 /**
  * 插件就是这么一个对象。
@@ -25,13 +34,18 @@ export interface Plugin {
   name: string
   /** 我要用到哪些服务。它们都到齐了，setup 才会被调用。 */
   needs?: string[]
-  /** 装载时执行一次。ctx 是这个插件专属的把手。 */
-  setup(ctx: Context): void
+  /**
+   * 装载时执行一次。
+   * ctx 是这个插件专属的把手；config 是装配单发给它的配置。
+   */
+  setup(ctx: Context, config: Record<string, unknown>): void
 }
 
 /** 一个插件在内核里占的那块地。拆插件时按这块地回收。 */
 interface Scope {
   plugin: Plugin
+  /** 装配单发给这个插件的配置 */
+  config: Record<string, unknown>
   /** 这个插件挂上去的服务名 */
   provided: string[]
   /** 这个插件登记过的清理函数 */
@@ -44,6 +58,8 @@ export class Kernel {
   private services = new Map<string, unknown>()
   /** 事件名 -> 监听器集合 */
   private listeners = new Map<string, Set<Listener>>()
+  /** 事件名 -> 环绕式监听器集合。和上面那张表分开存，因为签名不一样。 */
+  private wrappers = new Map<string, Set<Wrapper>>()
   /** 已经装上的插件 */
   private scopes: Scope[] = []
   /** 依赖还没齐、正在排队等的插件 */
@@ -56,8 +72,8 @@ export class Kernel {
    * 不管依赖齐没齐，先进队列，再让内核统一去扫。
    * 所以装配单的顺序无所谓——写在前面的可以等后面的。
    */
-  use(plugin: Plugin): void {
-    this.waiting.push({ plugin, provided: [], cleanups: [], active: false })
+  use(plugin: Plugin, config: Record<string, unknown> = {}): void {
+    this.waiting.push({ plugin, config, provided: [], cleanups: [], active: false })
     if (!this.ready(plugin)) {
       this.announce('plugin/wait', {
         name: plugin.name,
@@ -117,7 +133,7 @@ export class Kernel {
     scope.active = true
     this.scopes.push(scope)
     this.announce('plugin/start', { name: scope.plugin.name })
-    scope.plugin.setup(new Context(this, scope))
+    scope.plugin.setup(new Context(this, scope), scope.config)
   }
 
   /** 内核自己发的事件，走的是同一套监听器 */
@@ -137,6 +153,7 @@ export class Kernel {
   root(): Context {
     const scope: Scope = {
       plugin: { name: 'root', setup: () => {} },
+      config: {},
       provided: [],
       cleanups: [],
       active: true,
@@ -152,6 +169,12 @@ export class Kernel {
   /** @internal */ addListener(event: string, fn: Listener) {
     let set = this.listeners.get(event)
     if (!set) this.listeners.set(event, (set = new Set()))
+    set.add(fn)
+  }
+  /** @internal */ wrappersOf(event: string) { return this.wrappers.get(event) }
+  /** @internal */ addWrapper(event: string, fn: Wrapper) {
+    let set = this.wrappers.get(event)
+    if (!set) this.wrappers.set(event, (set = new Set()))
     set.add(fn)
   }
 }
@@ -210,5 +233,35 @@ export class Context {
   /** 在这个上下文里再装一个插件 */
   plugin(plugin: Plugin): void {
     this.kernel.use(plugin)
+  }
+
+  /**
+   * 登记一个环绕式监听器。拆插件时会自动取消，和 on() 一样。
+   *
+   * 用它而不用 on()，是因为你想左右这件事的结果，不只是知道它发生了。
+   */
+  intercept(event: string, fn: Wrapper): void {
+    this.kernel.addWrapper(event, fn)
+    this.scope.cleanups.push(() => this.kernel.wrappersOf(event)?.delete(fn))
+  }
+
+  /**
+   * 发一个环绕式事件，拿回最终结果。
+   *
+   * 监听器排成一队，每个人拿到 (值, next)：
+   *   - 调 next(值)  → 交给下一个人，最后一个交给 base（真正干活的那段）
+   *   - 不调 next    → 短路，后面的人和 base 都不跑，你的返回值就是最终结果
+   *   - 也可以先 next 拿到下游结果，再包一层返回
+   *
+   * emit 做不到这三件事里的任何一件，这就是两者的区别。
+   */
+  waterfall<T>(event: string, value: T, base: (value: T) => T): T {
+    const chain = [...(this.kernel.wrappersOf(event) ?? [])]
+    const step = (index: number, current: T): T => {
+      const fn = chain[index]
+      if (!fn) return base(current)
+      return fn(current, (passed) => step(index + 1, passed as T)) as T
+    }
+    return step(0, value)
   }
 }

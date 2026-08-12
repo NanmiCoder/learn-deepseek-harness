@@ -149,7 +149,10 @@ export function Quiz({
                         correct ? "bg-[var(--teal-wash)]" : "bg-[var(--hot-wash)]"
                       }`}
                     >
-                      {correct ? item.explain : "这个不对。回到上面的分步演示再走一遍，注意每一步的运行记录。"}
+                      {correct
+                        ? item.explain
+                        : (answer !== null && item.wrongExplains?.[answer]?.trim()) ||
+                          "这个不对。回到上面的分步演示再走一遍，重点看运行记录那几行。"}
                     </span>
                   </motion.p>
                 )}

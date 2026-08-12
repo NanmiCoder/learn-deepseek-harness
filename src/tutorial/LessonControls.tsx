@@ -38,12 +38,18 @@ export function LessonControls({
       </div>
 
       <div className="flex items-center gap-4">
-        <span className="hidden items-center gap-1.5 text-[10px] text-[var(--ink-4)] xl:flex">
+        {/*
+          原来这条只在 xl 以上显示，笔记本屏幕根本看不到——快捷键做了等于没做。
+          窄屏收成两个箭头键，宽屏才把「空格 播放」也摆出来。
+        */}
+        <span className="flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">
           <kbd className="control-kbd">←</kbd>
           <kbd className="control-kbd">→</kbd>
           翻步
-          <kbd className="control-kbd ml-1">空格</kbd>
-          播放
+          <span className="hidden items-center gap-1.5 sm:flex">
+            <kbd className="control-kbd ml-1">空格</kbd>
+            播放
+          </span>
         </span>
         <span className="font-mono text-[11px] font-semibold text-[var(--ink)]">
           {positionLabel ?? `${String(currentStep + 1).padStart(2, "0")} / ${String(totalSteps).padStart(2, "0")}`}

@@ -42,7 +42,7 @@ export function RunLog({ steps, currentStep }: { steps: LessonStep[]; currentSte
         {visible.map((step, stepIndex) => {
           const isCurrent = stepIndex === currentStep;
           return (
-            <div className={isCurrent ? "" : "opacity-60"} key={step.id}>
+            <div className={isCurrent ? "" : "opacity-[0.78]"} key={step.id}>
               <div className={`px-3 pb-1 pt-2 text-[10px] font-semibold ${isCurrent ? "text-[var(--hot)]" : "text-[var(--ink-4)]"} ${stepIndex > 0 ? "mt-1.5 border-t border-[var(--line-soft)]" : ""}`}>
                 {String(stepIndex + 1).padStart(2, "0")} {step.title}
               </div>

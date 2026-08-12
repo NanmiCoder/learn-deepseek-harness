@@ -6,6 +6,7 @@
  * 跑法：npm run check
  */
 import { lessons } from "../src/lessons";
+import { groups } from "../src/lessons/groups";
 import { buildDiagramFrame, buildFlowGroups, edgeKey } from "../src/tutorial/diagramFrames";
 
 declare const process: { exit(code: number): never };
@@ -43,11 +44,21 @@ const fs = require("fs");
 /**
  * 保密体检。
  *
- * 教程里的代码必须全部来自我们自己写的 demo/mini-harness/。
+ * 规则只有一条：**教程里能出现的名字，必须是我们自己仓库里真实存在的名字。**
+ * 所有可引用的代码都在 demo/ 下——mini-harness 是讲原理的最小实现，
+ * dsh-plugin-example 是讲实战的最小可装插件。
+ *
  * 这里用的是「正向规则」而不是「黑名单」——黑名单要把内测项目的内部符号名
  * 抄进这个文件，等于把它们留在了仓库里。正向规则只认自己人，更严也更干净。
+ *
+ * 实战层要用到的真实包名和 manifest 字段（@deepseek-ai/dsh-*、dsh.bundle.patch 等）
+ * 不需要单独维护白名单：它们出现在 demo/dsh-plugin-example/ 的真实代码里，
+ * 自然就被 demoSource 收录了。写不进那个例子的名字，也就不该写进教程。
  */
-const OURS = "demo/mini-harness/";
+const OURS = "demo/";
+
+/** 代码片段里的相对 import（如 plugins/tool-count.ts）按这几个根依次解析 */
+const DEMO_ROOTS = ["demo/", "demo/mini-harness/", "demo/dsh-plugin-example/"];
 
 /** 看起来像文件路径的东西 */
 const PATH_LIKE = /\b[\w.-]+(?:\/[\w.-]+)+\.(?:ts|tsx|js|mjs|json|ya?ml|md|py|sh)\b/g;
@@ -55,15 +66,82 @@ const PATH_LIKE = /\b[\w.-]+(?:\/[\w.-]+)+\.(?:ts|tsx|js|mjs|json|ya?ml|md|py|sh
 /** 看起来像代码标识符的东西：ctx.xxx 或者 xxx() */
 const IDENT_LIKE = /\bctx\.(\w+)|\b([a-z]\w{3,})\(\)/g;
 
-/** demo 的全部源码，拼成一坨用来查「这个名字我们自己有没有」 */
+/**
+ * 驼峰字段名，如 delegationDepth。
+ * 补 IDENT_LIKE 的盲区：它只认 ctx.xxx 和 xxx()，
+ * 裸写的内部字段名可以直接溜过去。
+ */
+const FIELD_LIKE = /\b([a-z]+[A-Z]\w*)\b/g;
+
+/**
+ * 带斜杠的事件名，如 tool/before、subagent/descriptor。
+ * 同样是 IDENT_LIKE 的盲区。扫之前会先把文件路径摘掉，
+ * 否则 demo/mini-harness 这种会被当成事件名。
+ */
+const EVENT_LIKE = /\b([a-z][\w-]*\/[a-z][\w-]*)\b/g;
+
+/**
+ * 我们自己的目录，写在文里时不带扩展名，如 demo/mini-harness/ 或 demo/dsh-plugin-example。
+ * 形状和事件名撞了，扫事件名之前要先摘掉，否则会误报。
+ */
+const DEMO_DIR_LIKE = /\bdemo\/[\w.-]+(?:\/[\w.-]+)*\/?/g;
+
+/**
+ * 只扫读者看得见的文字。
+ * 图的节点 id、连线端点、点亮列表都是课程数据内部的接线，
+ * 名字取得像代码是正常的（modelPlugin 是个节点 id，不是泄漏的符号）。
+ */
+const WIRING_FIELD = /(^|\.)(id|from|to)$|\.(activeNodes|activeEdges|highlight)\[/;
+
+/** 语言和浏览器自带的东西，不算任何项目的符号 */
+const PLATFORM_GLOBALS = new Set([
+  "setInterval",
+  "clearInterval",
+  "setTimeout",
+  "clearTimeout",
+  "toString",
+  "JSON",
+]);
+
+/**
+ * demo 的全部源码，拼成一坨用来查「这个名字我们自己有没有」。
+ * 收 .ts/.tsx（代码）、.json/.yml（manifest 与组合补丁——实战层的字段名在这里面）。
+ */
 const demoSource: string = (() => {
+  const KEEP = /\.(?:ts|tsx|json|ya?ml)$/;
+
+  /**
+   * 只收我们手写的源码。
+   *
+   * 装过依赖、构建过之后，这几个目录里会出现成千上万个不是我们写的名字。
+   * 收进来等于把第三方包名静默放进白名单——白名单失效时不会报错，
+   * 所以这里宁可漏收也不多收。
+   */
+  const SKIP_DIRS = new Set(["node_modules", "lib", "dist", "build", ".cache"]);
+
+  /** lockfile 匹配 ya?ml，但里面几百个包名一个都不是我们写的 */
+  const SKIP_FILES = /(?:^|\/)(?:pnpm-lock\.yaml|package-lock\.json|yarn\.lock)$/;
+
+  /** 构建产物的类型声明匹配 .ts，同理 */
+  const SKIP_GENERATED = /\.d\.ts$/;
+
   const walk = (dir: string): string[] =>
     fs.readdirSync(dir).flatMap((name: string) => {
       const full = `${dir}/${name}`;
-      return fs.statSync(full).isDirectory() ? walk(full) : full.endsWith(".ts") ? [full] : [];
+      if (fs.statSync(full).isDirectory()) return SKIP_DIRS.has(name) ? [] : walk(full);
+      if (SKIP_FILES.test(full) || SKIP_GENERATED.test(full)) return [];
+      return KEEP.test(full) ? [full] : [];
     });
   return walk("demo").map((file: string) => fs.readFileSync(file, "utf8")).join("\n");
 })();
+
+/**
+ * 负向拦截：源码仓库的目录形状。
+ *
+ * 正向规则本来就拦得住这些，加这一条是为了把意图固化在代码里而不是注释里。
+ * 这里写的是通用目录名，不是内测项目的内部符号，所以不违反「不写黑名单」那条。
+ */
+const FORBIDDEN_PATH = /(^|\/)(?:packages|apps|vendor|native|website)\//;
 
 /**
  * 核对代码片段。
@@ -109,6 +187,14 @@ function collectText(value: unknown, path: string, out: { path: string; text: st
 }
 
 const seenIds = new Set<string>();
+const groupIds = new Set(groups.map((group) => group.id));
+
+// 反过来也查一次：登记了却没有课挂上去的阶段，侧边栏会渲染成一个空壳
+for (const group of groups) {
+  if (!lessons.some((lesson) => lesson.group === group.id)) {
+    warn(`[groups.ts]`, `阶段「${group.title}」(${group.id}) 下面一节课都没有`);
+  }
+}
 
 for (const lesson of lessons) {
   const at = `[${lesson.index} ${lesson.title}]`;
@@ -116,25 +202,50 @@ for (const lesson of lessons) {
   if (seenIds.has(lesson.id)) fail(at, `id 重复：${lesson.id}`);
   seenIds.add(lesson.id);
 
+  // 分组写错一个字母，这节课会悄悄退回平铺，不报错也不丢课——
+  // 失效时没有任何信号，所以这里必须拦住。
+  if (!groupIds.has(lesson.group)) {
+    fail(at, `group「${lesson.group}」没在 src/lessons/groups.ts 里登记，侧边栏会把这节课漏出分组`);
+  }
+
   // 保密体检：出现的路径和标识符，必须都是我们自己 demo 里有的
   const texts: { path: string; text: string }[] = [];
   collectText(lesson, "", texts);
   for (const { path, text } of texts) {
     for (const hit of text.match(PATH_LIKE) ?? []) {
+      if (FORBIDDEN_PATH.test(hit)) {
+        fail(at, `${path} 出现了源码仓库的路径「${hit}」，教程里绝对不许引用`);
+        continue;
+      }
       // demo 自己的文件，以及代码里那些相对 import（比如 plugins/tool-count.ts），都算自己人
       const ours =
-        hit.startsWith("demo/") || fs.existsSync(OURS + hit) || fs.existsSync(OURS + "plugins/" + hit);
+        hit.startsWith("demo/") ||
+        DEMO_ROOTS.some((root) => fs.existsSync(root + hit) || fs.existsSync(root + "plugins/" + hit));
       if (!ours) fail(at, `${path} 出现了外部路径「${hit}」，教程里只能引用 ${OURS} 下的文件`);
     }
-    IDENT_LIKE.lastIndex = 0;
-    let m = IDENT_LIKE.exec(text);
-    while (m) {
-      const name = m[1] ?? m[2];
-      if (name && !demoSource.includes(name)) {
-        fail(at, `${path} 出现了标识符「${m[0]}」，但 demo 里没有这个东西，不许写进教程`);
+
+    // 图的接线字段不是给读者看的，跳过
+    if (WIRING_FIELD.test(path)) continue;
+
+    // 把路径摘掉再扫，否则 demo/mini-harness/kernel.ts 会被当成事件名和字段名。
+    // 不带扩展名的目录（demo/dsh-plugin-example）也要摘——它长得和事件名一模一样。
+    const stripped = text.replace(PATH_LIKE, " ").replace(DEMO_DIR_LIKE, " ");
+
+    const scan = (re: RegExp, kind: string) => {
+      re.lastIndex = 0;
+      let m = re.exec(stripped);
+      while (m) {
+        const name = m[1] ?? m[2];
+        if (name && !PLATFORM_GLOBALS.has(name) && !demoSource.includes(name)) {
+          fail(at, `${path} 出现了${kind}「${m[0]}」，但 demo 里没有这个东西，不许写进教程`);
+        }
+        m = re.exec(stripped);
       }
-      m = IDENT_LIKE.exec(text);
-    }
+    };
+
+    scan(IDENT_LIKE, "标识符");
+    scan(FIELD_LIKE, "字段名");
+    scan(EVENT_LIKE, "事件名");
   }
 
   for (const step of lesson.steps) {
@@ -297,12 +408,20 @@ for (const lesson of lessons) {
 
   // 其他必填
   if ([...lesson.oneLiner].length > 40) warn(at, `oneLiner ${[...lesson.oneLiner].length} 字，超过 40 字`);
-  if ([...lesson.analogy].length > 160) warn(at, `analogy ${[...lesson.analogy].length} 字，超过 150 字`);
+  if (lesson.analogy && [...lesson.analogy].length > 160) {
+    warn(at, `analogy ${[...lesson.analogy].length} 字，超过 150 字`);
+  }
+  if (lesson.positioning && [...lesson.positioning].length > 160) {
+    warn(at, `positioning ${[...lesson.positioning].length} 字，超过 150 字`);
+  }
   for (const concept of lesson.concepts) {
     if ([...concept.plain].length > 45) warn(at, `概念「${concept.term}」的解释 ${[...concept.plain].length} 字，超过 45 字`);
   }
   if (!lesson.oneLiner.trim()) fail(at, "oneLiner 是空的");
-  if (!lesson.analogy.trim()) fail(at, "analogy 是空的");
+  // analogy 和 positioning 二选一：没有合格的比喻时应该改写 positioning，而不是凑一个比喻。
+  if (!lesson.analogy?.trim() && !lesson.positioning?.trim()) {
+    fail(at, "analogy 和 positioning 都是空的，至少要有一个");
+  }
   if (lesson.concepts.length === 0) fail(at, "concepts 是空的");
   if ([...lesson.summary].length > 14) warn(at, `summary ${[...lesson.summary].length} 字，侧边栏可能放不下`);
 }
