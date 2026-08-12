@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowBendRightDown,
+  ArrowRight,
   Clock,
   Code,
   Info,
@@ -13,11 +14,23 @@ import {
 import { CodePanel } from "../components/CodePanel";
 import { Quiz } from "../components/Quiz";
 import { RunLog } from "../components/RunLog";
-import { StageDiagram } from "../components/StageDiagram";
+import { StageDiagram, hasMobileCells } from "../components/StageDiagram";
 import { LessonControls } from "./LessonControls";
 import { useLessonPlayer } from "./useLessonPlayer";
 import { buildDiagramFrame, buildFlowGroups } from "./diagramFrames";
 import type { Lesson } from "./types";
+
+/** 窄屏判定。图在窄屏要么换竖版坐标，要么横滚，不能继续等比缩小。 */
+function useNarrowViewport(): boolean {
+  const [narrow, setNarrow] = useState(() => window.matchMedia("(max-width: 639px)").matches);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+    const onChange = (event: MediaQueryListEvent) => setNarrow(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+  return narrow;
+}
 
 const LEGEND: { kind: "core" | "plugin" | "external" | "data"; label: string; color: string }[] = [
   { kind: "core", label: "内核", color: "var(--node-core-stroke)" },
@@ -26,15 +39,47 @@ const LEGEND: { kind: "core" | "plugin" | "external" | "data"; label: string; co
   { kind: "data", label: "数据", color: "var(--node-data-stroke)" },
 ];
 
+/** 正文开头那张卡：可能是比方，也可能是「这一节讲什么」的直述。 */
+function IntroCard({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="analogy-card soft-card rounded-[1.5rem] p-5 sm:px-[1.375rem]">
+      <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--teal)]">
+        <Info aria-hidden="true" size={14} weight="regular" />
+        {label}
+      </div>
+      <p className="mt-2.5 max-w-[78ch] text-[13.5px] leading-[1.95] text-[var(--ink)]">{text}</p>
+    </div>
+  );
+}
+
+/**
+ * 这一节的代码取自哪几个 demo 目录，从 steps[].code.source 里现算。
+ * 不写死，是因为教程横跨 demo/mini-harness/ 和 demo/dsh-plugin-example/ 两处，
+ * 而且以后还会加——写死的落款迟早会变成假话。
+ */
+function codeRootsOf(lesson: Lesson): string[] {
+  const roots = new Set<string>();
+  for (const step of lesson.steps) {
+    const parts = step.code?.source.split("/");
+    if (parts && parts.length >= 2) roots.add(`${parts[0]}/${parts[1]}/`);
+  }
+  return [...roots];
+}
+
 export function LessonView({
   lesson,
   passed,
   onPass,
+  nextLesson,
+  onGoNext,
 }: {
   lesson: Lesson;
   passed: boolean;
   onPass: () => void;
+  nextLesson?: Lesson;
+  onGoNext?: () => void;
 }) {
+  const codeRoots = useMemo(() => codeRootsOf(lesson), [lesson]);
   const teachingFrames = useMemo(
     () => [
       ...lesson.steps.flatMap((item, stepIndex) => {
@@ -53,6 +98,9 @@ export function LessonView({
   const usedKinds = new Set(lesson.stage.nodes.map((node) => node.kind));
   const [codeOpen, setCodeOpen] = useState(false);
   const codeButtonRef = useRef<HTMLButtonElement>(null);
+  const currentStepRef = useRef<HTMLButtonElement>(null);
+  const narrow = useNarrowViewport();
+  const hasMobileLayout = hasMobileCells(lesson.stage.nodes);
   const diagramFrame = useMemo(
     () => buildDiagramFrame(lesson, cursor.stepIndex, cursor.beatIndex),
     [cursor.beatIndex, cursor.stepIndex, lesson],
@@ -68,6 +116,12 @@ export function LessonView({
   useEffect(() => {
     setCodeOpen(false);
   }, [lesson.id]);
+
+  // 步骤条横排时装不下所有步，播放中当前步会滑出可视区；竖排时步骤多了也一样。
+  // nearest 只在真的看不见时才滚。
+  useEffect(() => {
+    currentStepRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [stepIndex, isOverview]);
 
   useEffect(() => {
     if (codeOpen && (!step.code || isOverview)) setCodeOpen(false);
@@ -113,13 +167,12 @@ export function LessonView({
 
         {!lesson.architectureFirst && (
           <section aria-label="先看懂" className="mt-6">
-            <div className="analogy-card soft-card rounded-[1.5rem] p-5 sm:px-[1.375rem]">
-              <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--teal)]">
-                <Info aria-hidden="true" size={14} weight="regular" />
-                先打个比方
+            {lesson.positioning && <IntroCard label="先说清是什么" text={lesson.positioning} />}
+            {lesson.analogy && (
+              <div className={lesson.positioning ? "mt-3" : undefined}>
+                <IntroCard label="先打个比方" text={lesson.analogy} />
               </div>
-              <p className="mt-2.5 max-w-[78ch] text-[13.5px] leading-[1.95] text-[var(--ink)]">{lesson.analogy}</p>
-            </div>
+            )}
 
             <div className="mt-[1.375rem]">
               <div className="px-1 pb-2.5 text-[11px] font-semibold text-[var(--ink-2)]">这节课会出现的词</div>
@@ -138,9 +191,16 @@ export function LessonView({
           </section>
         )}
 
-        <section aria-label="分步演示" className="soft-panel mt-[1.375rem] overflow-hidden rounded-[1.75rem] backdrop-blur-2xl">
+        <section aria-label="分步演示" className="soft-panel mt-[1.375rem] rounded-[1.75rem] backdrop-blur-2xl">
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-0 pt-4 sm:px-5">
-            <span className="text-[11px] font-semibold text-[var(--ink-2)]">分步演示 · 一次对话怎么跑完</span>
+            <span className="text-[11px] font-semibold text-[var(--ink-2)]">
+              {/*
+                这一行是「这节要给你看什么」，不是装饰。写死之后每节课都顶着同一句，
+                讲插件容器、讲多 Agent 协作的课也说「一次对话怎么跑完」，会误导读者。
+                课程数据里写了 stageTitle 就用它的，没写才回落到这句。
+              */}
+              {lesson.stageTitle ?? "分步演示"}
+            </span>
             {step.code && !isOverview ? (
               <button
                 aria-haspopup="dialog"
@@ -185,7 +245,7 @@ export function LessonView({
             </motion.div>
           </AnimatePresence>
 
-          <div className="workbench-grid grid min-w-0 gap-3 px-4 pb-3 sm:px-5 lg:grid-cols-[212px_minmax(0,1fr)]">
+          <div className="workbench-grid grid min-w-0 gap-3 px-4 pb-3 sm:px-5 2xl:grid-cols-[212px_minmax(0,1fr)]">
             <div className="step-rail thin-scroll" aria-label="演示步骤">
               <div className="step-rail-label">步骤</div>
               {lesson.steps.map((item, itemIndex) => {
@@ -197,6 +257,7 @@ export function LessonView({
                     className={`step-rail-item ${current ? "step-rail-item--current" : ""}`}
                     key={item.id}
                     onClick={() => player.goTo(firstFrameForStep[itemIndex])}
+                    ref={current ? currentStepRef : undefined}
                     type="button"
                   >
                     <span className={`step-rail-number ${current ? "is-current" : past ? "is-past" : ""}`}>
@@ -210,6 +271,7 @@ export function LessonView({
                 aria-current={isOverview ? "step" : undefined}
                 className={`step-rail-item ${isOverview ? "step-rail-item--current" : ""}`}
                 onClick={() => player.goTo(teachingFrames.length - 1)}
+                ref={isOverview ? currentStepRef : undefined}
                 type="button"
               >
                 <span className={`step-rail-number ${isOverview ? "is-current" : ""}`}>◎</span>
@@ -217,12 +279,16 @@ export function LessonView({
               </button>
             </div>
 
-            <div className={`soft-inset thin-scroll relative h-[340px] min-w-0 rounded-[1.25rem] px-2 pb-8 pt-2 lg:h-[430px] ${lesson.stage.scrollOnMobile ? "overflow-x-auto" : ""}`}>
+            <div className="soft-inset thin-scroll relative h-[min(340px,46vh)] min-w-0 overflow-x-auto rounded-[1.25rem] px-2 pb-8 pt-2 2xl:h-[min(430px,48vh)]">
               <div className="current-flow" aria-live="polite">
                 <span>{isOverview ? "全局关系" : `当前动作${cursor.beatCount > 1 ? ` ${cursor.beatIndex + 1}/${cursor.beatCount}` : ""}`}</span>
                 <strong>{diagramFrame.actionText}</strong>
               </div>
-              <div className={`h-full pt-10 ${lesson.stage.scrollOnMobile ? "min-w-[760px] sm:min-w-0" : ""}`}>
+              {/*
+                窄屏给图一个不再缩小的底线：宁可横滚，也不要缩到看不清。
+                填了 mobileCol 的课在窄屏能重排成竖版，不需要这个兜底。
+              */}
+              <div className={`h-full pt-10 ${hasMobileLayout ? "" : "min-w-[800px] lg:min-w-0"}`}>
                 <StageDiagram
                   caption={isOverview ? `${lesson.title} 完整链路总览` : `${lesson.title} 第 ${stepIndex + 1} 步：${step.title}`}
                   columnLabels={diagramFrame.columnLabels}
@@ -231,6 +297,7 @@ export function LessonView({
                   edges={diagramFrame.edges}
                   enteringNodes={diagramFrame.enteringNodes}
                   frameKey={`${player.currentStep}`}
+                  narrow={narrow && hasMobileLayout}
                   mode={diagramFrame.mode}
                   nodes={diagramFrame.nodes}
                   revealedEdges={diagramFrame.revealedEdges}
@@ -248,10 +315,15 @@ export function LessonView({
             </div>
           </div>
 
-          <div className="h-[220px] px-4 pb-1 sm:px-5">
+          <div className="h-[min(220px,26vh)] px-4 pb-1 sm:px-5">
             <RunLog currentStep={stepIndex} steps={lesson.steps} />
           </div>
 
+          {/*
+            面板比内容可视区高，图和按钮没法同屏——读者看得见图就点不到按钮，
+            点得到按钮又看不见图。吸底之后按钮跟着面板走，始终在手边。
+          */}
+          <div className="sticky bottom-0 z-10 rounded-b-[1.75rem] bg-[var(--surface-panel-sticky)] backdrop-blur-xl">
           <LessonControls
             currentStep={player.currentStep}
             isPlaying={player.isPlaying}
@@ -262,6 +334,7 @@ export function LessonView({
             positionLabel={isOverview ? "总览" : `步骤 ${String(stepIndex + 1).padStart(2, "0")}${cursor.beatCount > 1 ? ` · 动作 ${cursor.beatIndex + 1}/${cursor.beatCount}` : ""}`}
             stepTitles={teachingFrames.map((frame) => frame.kind === "overview" ? "完整链路总览" : lesson.steps[frame.stepIndex].title)}
           />
+          </div>
         </section>
 
         {lesson.architectureFirst && (
@@ -269,12 +342,16 @@ export function LessonView({
             <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-[1.125rem] py-3.5 text-[12.5px] font-semibold text-[var(--ink)] transition-colors">
               <span className="flex items-center gap-2">
                 <Info aria-hidden="true" className="text-[var(--teal)]" size={14} weight="regular" />
-                补充：四个角色分别负责什么
+                补充：这张图上的角色和机制
               </span>
               <span className="font-mono text-[10px] font-normal text-[var(--ink-4)]">展开 ▾</span>
             </summary>
             <div className="border-t border-[var(--line-soft)] px-[1.125rem] py-4">
-              <p className="max-w-[78ch] text-[12.5px] leading-[1.8] text-[var(--ink-2)]">{lesson.analogy}</p>
+              {(lesson.positioning ?? lesson.analogy) && (
+                <p className="max-w-[78ch] text-[12.5px] leading-[1.8] text-[var(--ink-2)]">
+                  {lesson.positioning ?? lesson.analogy}
+                </p>
+              )}
               <dl className="mt-4 grid gap-3 md:grid-cols-2">
                 {lesson.concepts.map((concept) => (
                   <div className="soft-inset min-w-0 rounded-[1rem] p-4" key={concept.term}>
@@ -345,6 +422,28 @@ export function LessonView({
           <Quiz items={lesson.quiz} lessonId={lesson.id} onPass={onPass} passed={passed} />
         </div>
 
+        {/*
+          刚答对的那一秒是读者最愿意继续的时候，之前那里什么都没有——
+          底部页脚的「下一课」一直都在，通过前后长得一样，读者不会当成奖励。
+        */}
+        {passed && nextLesson && onGoNext && (
+          <motion.div
+            animate={{ opacity: 1, y: 0 }}
+            className="next-lesson-cue mt-[1.375rem] flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] px-5 py-4"
+            initial={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.24 }}
+          >
+            <span className="min-w-0 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
+              这一课过了。下一课：
+              <span className="font-semibold text-[var(--ink)]">{nextLesson.title}</span>
+            </span>
+            <button className="soft-action soft-action--primary shrink-0" onClick={onGoNext} type="button">
+              继续
+              <ArrowRight aria-hidden="true" size={14} weight="bold" />
+            </button>
+          </motion.div>
+        )}
+
         {lesson.bridge && (
           <div className="bridge-card soft-card mt-[1.375rem] flex items-start gap-3 rounded-[1.5rem] p-5">
             <ArrowBendRightDown aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--teal)]" size={16} weight="regular" />
@@ -352,10 +451,12 @@ export function LessonView({
           </div>
         )}
 
-        <div className="mt-6 flex items-center justify-center gap-2 text-[10px] text-[var(--ink-4)]">
-          <Path aria-hidden="true" size={12} weight="regular" />
-          本节内容基于源码整理
-        </div>
+        {codeRoots.length > 0 && (
+          <div className="mt-6 flex items-center justify-center gap-2 text-center text-[10px] text-[var(--ink-4)]">
+            <Path aria-hidden="true" className="shrink-0" size={12} weight="regular" />
+            这一节的代码来自 {codeRoots.join("、")}，都能在本仓库里跑起来
+          </div>
+        )}
       </article>
 
       <AnimatePresence>
@@ -374,7 +475,7 @@ export function LessonView({
               aria-labelledby="code-drawer-title"
               aria-modal="true"
               animate={{ x: 0 }}
-              className="code-drawer fixed inset-y-2 right-2 z-50 flex w-[min(580px,calc(100vw-16px))] flex-col rounded-[1.75rem] backdrop-blur-3xl sm:inset-y-4 sm:right-4 sm:w-[min(580px,calc(100vw-32px))]"
+              className="code-drawer fixed inset-y-2 right-2 z-50 flex w-[min(760px,calc(100vw-16px))] flex-col rounded-[1.75rem] backdrop-blur-3xl sm:inset-y-4 sm:right-4 sm:w-[min(760px,calc(100vw-32px))]"
               exit={{ x: "calc(100% + 24px)" }}
               initial={{ x: "calc(100% + 24px)" }}
               role="dialog"
@@ -396,10 +497,26 @@ export function LessonView({
               </div>
 
               <div className="grid grid-cols-2 gap-2 px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
-                <button className="soft-action justify-center" disabled={player.currentStep === 0} onClick={player.previous} type="button">
+                {/*
+                  按「步」跳，不按「帧」跳。player.currentStep 索引的是 teachingFrames，
+                  它比 steps 长（每步可能拆成多拍，末尾还多一帧总览）。
+                  拿它跟 steps.length 比，按钮会在课程中途就锁死；
+                  拿它当步号翻，点一下常常还停在同一步、代码一个字不变。
+                */}
+                <button
+                  className="soft-action justify-center"
+                  disabled={stepIndex === 0}
+                  onClick={() => player.goTo(firstFrameForStep[stepIndex - 1])}
+                  type="button"
+                >
                   ← 上一步的代码
                 </button>
-                <button className="soft-action justify-center" disabled={player.currentStep === lesson.steps.length - 1} onClick={player.next} type="button">
+                <button
+                  className="soft-action justify-center"
+                  disabled={stepIndex >= lesson.steps.length - 1}
+                  onClick={() => player.goTo(firstFrameForStep[stepIndex + 1])}
+                  type="button"
+                >
                   下一步的代码 →
                 </button>
               </div>

@@ -1,0 +1,24 @@
+// client 面的编译配置。跑在浏览器里的那一半。
+//
+// 为什么不能和 host 共用一个 program：
+// host 侧的会话包和浏览器侧的运行时包，都往 cordis 的 Context 上合并了
+// 一个叫 sessions 的成员，但类型不是一个东西。放进同一个 program 里，
+// 两份声明会打架，最后只有先加载的那份生效，报出来的错还看不懂。
+// 拆成两个 program，各自只看得见自己那半边的声明，问题就不存在了。
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // 浏览器环境，补上 DOM。
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // 写 JSX 必须开这个。注意还有个前提：文件名得是 .tsx。
+    "jsx": "react-jsx",
+    // 浏览器里没有 node 全局类型，清空。
+    "types": []
+  },
+  // 只编译 client 目录，外加共享的纯类型文件。
+  // event-types.ts 两边都要用，所以两个 program 都包含它——
+  // 这也是它必须零 import 的原因，见那个文件顶部的注释。
+  "include": ["src/client", "src/event-types.ts"],
+  // 覆盖掉 host 那份的 exclude，否则会把 src/client 排除掉。
+  "exclude": []
+}

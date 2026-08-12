@@ -30,6 +30,7 @@
   --surface-sidebar: rgb(249 253 253 / 0.72);
   --surface-chrome: rgb(255 255 255 / 0.34);
   --surface-panel: rgb(255 255 255 / 0.82);
+  --surface-panel-sticky: rgb(252 254 254 / 0.94);
   --surface-card: rgb(255 255 255 / 0.86);
   --surface-button: rgb(255 255 255 / 0.86);
   --surface-inset: #f7fcfc;
@@ -51,24 +52,25 @@
   --node-core-fill: #cdf4f2;
   --node-core-stroke: #019b98;
   --node-core-text: #014e60;
-  --node-core-sub: #2f8b88;
+  --node-core-sub: #1d6b69;
   --node-plugin-fill: #e2f7f6;
   --node-plugin-stroke: #33b0ad;
   --node-plugin-text: #014e60;
-  --node-plugin-sub: #357f8c;
+  --node-plugin-sub: #23606c;
   --node-external-fill: #e4eef1;
   --node-external-stroke: #7aa6b3;
   --node-external-text: #014e60;
-  --node-external-sub: #3f7a8d;
+  --node-external-sub: #2b5f70;
   --node-data-fill: #fbf1de;
   --node-data-stroke: #c99a4e;
   --node-data-text: #7a5a26;
-  --node-data-sub: #a07f4a;
+  --node-data-sub: #765a2c;
   --node-idle-fill: #ffffff;
   --node-idle-stroke: #b5cdd4;
-  --node-idle-text: #3f7a8d;
-  --node-idle-sub: #5f8d9d;
-  --node-idle-kind: #7fa3b0;
+  /* 这三个色会再乘一层 0.78 的组透明度，所以要比目标对比度更深一档 */
+  --node-idle-text: #17495a;
+  --node-idle-sub: #1b4553;
+  --node-idle-kind: #1b4553;
   --edge-idle: #a9c4cb;
   --diagram-label-stroke: #f9fdfd;
   --diagram-lane-fill: rgb(255 255 255 / 0.3);
@@ -162,6 +164,7 @@
   --surface-sidebar: rgb(8 29 37 / 0.86);
   --surface-chrome: rgb(8 28 36 / 0.72);
   --surface-panel: rgb(13 42 51 / 0.86);
+  --surface-panel-sticky: rgb(11 36 44 / 0.95);
   --surface-card: rgb(17 47 56 / 0.84);
   --surface-button: rgb(23 54 62 / 0.9);
   --surface-inset: #071f27;
@@ -197,9 +200,9 @@
   --node-data-sub: #c9aa75;
   --node-idle-fill: #0c2831;
   --node-idle-stroke: #31535c;
-  --node-idle-text: #bdd7dc;
-  --node-idle-sub: #789da5;
-  --node-idle-kind: #678e98;
+  --node-idle-text: #d3e6ea;
+  --node-idle-sub: #a8c6cd;
+  --node-idle-kind: #9bbcc4;
   --edge-idle: #3b6069;
   --diagram-label-stroke: #071f27;
   --diagram-lane-fill: rgb(30 73 82 / 0.08);
@@ -361,6 +364,11 @@ details > summary:hover {
   background: var(--surface-progress);
 }
 
+.next-lesson-cue {
+  border: 1px solid rgb(1 155 152 / 0.24);
+  background: var(--teal-wash);
+}
+
 .progress-fill {
   background: linear-gradient(to right, var(--teal-light), var(--teal));
 }
@@ -373,6 +381,124 @@ details > summary:hover {
 
 .sidebar-index-surface {
   background: var(--surface-button);
+}
+
+/* --- 目录：阶段分组 --- */
+
+.sidebar-stage-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 32px;
+  border-radius: 0.75rem;
+  padding-inline: 0.5rem;
+  color: var(--ink-2);
+}
+
+.sidebar-stage-head:hover {
+  background: var(--surface-hover);
+}
+
+.sidebar-stage-bar {
+  overflow: hidden;
+  width: 26px;
+  height: 3px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--surface-progress);
+}
+
+.sidebar-stage-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--teal);
+  transition: width var(--transition-fast);
+}
+
+.sidebar-lesson {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 34px;
+  border-radius: 0.75rem;
+  padding-inline: 0.5rem;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.sidebar-lesson:hover {
+  color: var(--ink);
+  background: var(--surface-hover);
+}
+
+.sidebar-lesson.is-active {
+  color: var(--ink);
+  background: var(--surface-active);
+  box-shadow: var(--shadow-button);
+  font-weight: 600;
+}
+
+/* 左侧竖条比整块变色噪音小，十几行列表里也一眼扫得到 */
+.sidebar-lesson.is-active::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: -6px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--teal);
+}
+
+.sidebar-lesson-index {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  background: var(--surface-button);
+  color: var(--ink-4);
+  font-family: var(--font-family-mono);
+  font-size: 0.59rem;
+  font-weight: 700;
+}
+
+.sidebar-lesson-index.is-done {
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+}
+
+/* 完成态挂角标而不是把数字换成勾：学到一半时列表不会变成一串勾，编号还在 */
+.sidebar-lesson-tick {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #ffffff;
+}
+
+/* 只标「要动手的」，不标「只要读的」——少数派才扫得到 */
+.sidebar-lesson-hands {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  border-radius: 0.34rem;
+  background: var(--amber-soft);
+  color: var(--amber);
 }
 
 .theme-toggle {
@@ -432,9 +558,10 @@ details > summary:hover {
 
 .control-kbd {
   border-radius: 0.45rem;
-  padding: 0.125rem 0.4rem;
+  padding: 0.15rem 0.42rem;
+  color: var(--ink-3);
   font-family: var(--font-family-mono);
-  font-size: 0.575rem;
+  font-size: 0.65rem;
   background: var(--surface-active);
   box-shadow: inset 0 0 0 1px var(--line-soft);
 }
@@ -526,12 +653,14 @@ details > summary:hover {
   color: var(--step-title-past);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1536px) {
   .step-rail {
-    height: 430px;
+    height: min(430px, 48vh);
     flex-direction: column;
     overflow-x: hidden;
     overflow-y: auto;
+    /* 步骤多的课这里会溢出，渐隐是唯一的「下面还有」信号 */
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
   }
 
   .step-rail-label {
@@ -641,6 +770,14 @@ details > summary:hover {
 .code-line[data-hl="true"] {
   background: var(--code-highlight);
   box-shadow: inset 3px 0 0 var(--teal);
+}
+
+/* 长行要横滚，行号得留在原地，否则滚出去之后没有定位锚点 */
+.code-line > span:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: inherit;
 }
 
 .tok-key { color: var(--code-key); }

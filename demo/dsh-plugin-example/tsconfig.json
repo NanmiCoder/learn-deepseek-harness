@@ -1,0 +1,35 @@
+// host 面的编译配置。跑在 Node 里的那一半。
+//
+// 这个插件有两个 tsc program，这是第一个。为什么必须拆成两个，
+// 见 tsconfig.client.json 顶部的注释。
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    // DSH 全栈 ESM，host 侧按 Node 的 ESM 规则解析。
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    // 只给 ES 标准库。DOM 是 client 那一半的事。
+    "lib": ["ES2022"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    // 产物：lib/ 放可执行 JS，lib/types/ 放声明。
+    // package.json 的 main 和 exports 指的就是这两个目录。
+    "declaration": true,
+    "declarationDir": "lib/types",
+    "outDir": "lib",
+    "rootDir": "src",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    // 这两个必须成对出现，且需要 TypeScript 5.7 以上。
+    // 源码里写 './notes.ts'，编译出来自动改写成 './notes.js'。
+    // 版本低于 5.7 时 emit 会报 TS5096 / TS5023。
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["src"],
+  // host program 绝不编译 client。混进来会引入浏览器侧的类型声明，
+  // 和 host 侧的同名声明打架。
+  "exclude": ["src/client"]
+}

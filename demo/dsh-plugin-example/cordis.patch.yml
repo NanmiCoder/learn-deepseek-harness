@@ -1,0 +1,19 @@
+# 组合补丁：把这个包挂成 host 组合树里的一行。
+#
+# 装插件时（dsh plugin --profile <p> add <包>），包会被装进 profile，
+# 并加进 profile manifest 的 bundles 层列表。启动时这个文件作为补丁层
+# 生效，把下面这一行插进组合树。
+#
+# 顶层必须是 YAML 数组。写成对象会直接报错。
+- insert:
+    # 组合行的 id，全局唯一。dsh --dump-config 里看到的就是它。
+    - id: plugin-example
+      # 必须等于 package.json 的 name。
+      # 浏览器名册按这个名字去 require.resolve('<name>/package.json')，
+      # 写错了 host 面能起来、client 面永远加载不了。
+      name: dsh-plugin-example
+      # 传给插件 apply(ctx, config) 的第二个参数。
+      # 字段名要和 src/index.ts 里导出的 Config schema 对得上，
+      # 没写的字段由 schema 的 default 补齐。
+      config:
+        maxNotes: 20

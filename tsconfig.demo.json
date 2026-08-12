@@ -13,5 +13,12 @@
     "noEmit": true,
     "types": []
   },
-  "include": ["demo"]
+  "include": ["demo"],
+
+  // dsh-plugin-example 是一个独立项目，自带 tsconfig.json 和 tsconfig.client.json：
+  // host 侧编 Node、client 侧编浏览器 + JSX，两套设置这里都不适用。
+  // 它还依赖 @deepseek-ai/dsh-* 这些包，只在 DeepSeek Harness 的 checkout 里 link 得到，
+  // 公共 npm 上装不到，所以本仓库的 typecheck 覆盖不了它。
+  // 怎么验证见 demo/dsh-plugin-example/README.md。
+  "exclude": ["demo/dsh-plugin-example"]
 }

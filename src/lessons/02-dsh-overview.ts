@@ -1,340 +1,287 @@
-import type { Lesson } from "../tutorial/types";
+import type { Lesson, StageEdge, StageNode } from "../tutorial/types";
+
+/**
+ * 这一节回答两个问题：DeepSeek Harness 是什么，它跟 Claude Code 差在哪。
+ *
+ * 定位这件事只能靠对比讲清楚，所以两个问题合在一节里。
+ * 这一节不贴代码：讲的是三层关系和边界，堆代码只会把它埋掉。
+ * 运行记录里的每一行机器输出都是 npm run demo 的真实输出，逐行可核；
+ * 只在真实 DSH 才有、demo 里没有的说法，由 evidence 字段标明出处。
+ */
+
+const nodes: StageNode[] = [
+  { id: "profile", label: "组装单", sub: "这次装哪几件", col: 0, row: 1, kind: "data" },
+  { id: "cordis", label: "插件容器", sub: "装卸、依赖、生死", col: 1, row: 1, kind: "core" },
+  { id: "parts", label: "能力插件", sub: "模型 工具 会话 权限", col: 2, row: 0, kind: "plugin" },
+  { id: "loop", label: "主循环", sub: "也是其中一件", col: 2, row: 1, kind: "plugin" },
+  { id: "yours", label: "你写的插件", sub: "和自带的同一种", col: 2, row: 2, kind: "plugin" },
+  { id: "dsh", label: "dsh", sub: "你用的那个 agent", col: 3, row: 0, kind: "core", kindLabel: "产品" },
+  { id: "cc", label: "Claude Code", sub: "接口由产品定", col: 3, row: 2, kind: "external", kindLabel: "别家产品" },
+];
+
+const edges: StageEdge[] = [
+  { from: "profile", to: "cordis", label: "照单装" },
+  { from: "cordis", to: "parts", label: "装上" },
+  { from: "cordis", to: "loop", label: "装上" },
+  { from: "cordis", to: "yours", label: "装上" },
+  { from: "parts", to: "dsh", label: "跑起来就是" },
+  { from: "loop", to: "dsh", label: "跑起来就是" },
+  { from: "yours", to: "dsh", label: "跑起来就是" },
+  { from: "yours", to: "cc", label: "跨进程接入" },
+];
 
 export const dshOverview: Lesson = {
   id: "dsh-overview",
   index: "02",
-  title: "DeepSeek Harness 是什么",
-  summary: "这些活分别交给谁",
-  eyebrow: "框架概览",
-  readingMinutes: 10,
-  oneLiner: "Harness 不是一整块代码。它切成几块：内核、循环、模型、工具、会话。",
-  analogy:
-    "把 Harness 想成一间厨房。内核是墙上的水电和台面，自己不做菜，只让每件器具有地方插。循环是做菜的流程：看一眼菜谱，动手一步，尝一口，再看菜谱。剩下的都是器具：跟供货商打电话的、切菜洗菜的、记着「盐放过了」的。开工前有一张单子，写明今天搬哪几件进来。想换供货商，只换那一件，水电和流程一动不动。",
+  title: "DeepSeek Harness 是什么，跟 Claude Code 什么关系",
+  summary: "先分清零件库和产品",
+  eyebrow: "定位与对比",
+  group: "know",
+  readingMinutes: 11,
+  oneLiner: "一套连主循环都能换的零件，和用它装出来的那个编程 agent，共用这个名字。",
+  positioning:
+    "第 01 节讲的 Harness 是统称，DeepSeek Harness 是其中一个。它分三层：最底下一个通用插件容器；中间几十件插件，模型、工具、会话、权限，连主循环也在里面；最上面一张单子，决定这次装哪几件。你用的那个产品就是照单装出来的。这一节讲这三层，也讲它跟 Claude Code 差在哪。",
   concepts: [
     {
-      term: "内核",
-      plain: "一个只管装卸的容器。谁提供了什么、谁在等什么、拆的时候怎么收干净，就这三件事。",
-      source: "demo/mini-harness/kernel.ts · use() 与 remove()",
+      term: "插件容器 Cordis",
+      plain: "插件是能单独装上、单独拆掉的一件功能。容器只管装卸，谁在等谁、拆时怎么收干净都归它。",
+      source: "demo/mini-harness/kernel.ts · 同构的最小版，不是 Cordis",
     },
     {
       term: "服务",
-      plain: "一份挂在名字底下的能力。别人报名字来取，不认背后是谁写的。",
+      plain: "挂在一个名字底下的能力。别人报名字来取，不认背后是谁写的。",
       source: "demo/mini-harness/kernel.ts · provide() 与 get()",
     },
     {
-      term: "循环",
-      plain: "一句话进来之后转圈的那段流程：问模型、执行工具、结果回灌、再问。",
-      source: "demo/mini-harness/loop.ts · runTurn()",
+      term: "组装单 profile",
+      plain: "写明这次装哪几件。它是一层层叠出来的，后面的层盖前面的层。",
+      source: "demo/mini-harness/profile.ts · compose()",
     },
     {
-      term: "装配单",
-      plain: "一份名单，写明这次装哪几块。删掉一行那个功能就没了，别处不用改。",
-      source: "demo/mini-harness/main.ts · kernel.use(...)",
+      term: "主循环",
+      plain: "一句话进来后转圈的那段流程。它也是装配单上的一件插件，能整个换掉。",
+      source: "demo/mini-harness/loop.ts · loop 插件",
     },
   ],
   stage: {
-    nodes: [
-      { id: "main", label: "装配单", sub: "main.ts 决定装谁", col: 0, row: 1, kind: "core" },
-      { id: "kernel", label: "内核", sub: "kernel.ts 只管装卸", col: 1, row: 1, kind: "core" },
-      { id: "model", label: "模型接入", sub: "换一家就换它", col: 2, row: 0, kind: "plugin" },
-      { id: "tools", label: "工具", sub: "读文件 删文件", col: 2, row: 1, kind: "plugin" },
-      { id: "history", label: "会话历史", sub: "模型没记性", col: 2, row: 2, kind: "plugin" },
-      { id: "user", label: "用户", sub: "说一句话", col: 3, row: 0, kind: "external" },
-      { id: "loop", label: "循环", sub: "loop.ts 转圈的那段", col: 3, row: 1, kind: "core" },
-    ],
-    edges: [
-      { from: "main", to: "kernel", label: "照单装" },
-      { from: "kernel", to: "model", label: "挂上" },
-      { from: "kernel", to: "tools", label: "挂上" },
-      { from: "kernel", to: "history", label: "挂上" },
-      { from: "user", to: "loop", label: "说一句" },
-      { from: "loop", to: "model", label: "问一次" },
-      { from: "loop", to: "tools", label: "去执行" },
-      { from: "loop", to: "history", label: "存和取" },
-    ],
+    nodes,
+    edges,
+    columnLabels: ["装什么", "谁来装", "装的是什么", "装出来的东西"],
+    legendLabels: { core: "容器与产品", plugin: "插件", data: "组装单", external: "别家产品" },
+    overview: {
+      nodes,
+      edges: edges.map(({ from, to }) => ({ from, to, curve: "straight" as const })),
+      columnLabels: ["装什么", "谁来装", "装的是什么", "装出来的东西"],
+      summary: "一张单子叠出来，容器照单把插件装上，跑起来就是那台产品",
+    },
   },
   steps: [
     {
       id: "s1",
-      title: "照着装配单开工",
+      title: "一个名字，两样东西",
       detail:
-        "main.ts 就是一张单子。这次装哪几块，全写在这七行里。想去掉审批，把 approval 那行删掉就行。别的文件一行不用动。",
-      activeNodes: ["main", "kernel"],
-      activeEdges: ["main->kernel"],
+        "DeepSeek Harness 既指一套做编程 agent 的零件，也指用这套零件装出来的那个产品。读到这个名字，先分清说的是哪个。",
+      activeNodes: ["parts", "dsh"],
+      activeEdges: [],
+      log: [
+        { kind: "state", text: "零件那一层：模型、工具、会话、权限，都是插件" },
+        { kind: "state", text: "产品那一层：挑几件装到一起，跑起来的那个 agent" },
+        { kind: "warn", text: "两样东西共用一个名字，混着读，后面几节全乱" },
+      ],
+    },
+    {
+      id: "s2",
+      title: "底下是一个通用容器",
+      detail:
+        "最底下这层不是它自己写的，是一个通用插件容器，叫 Cordis。谁提供了什么、谁在等谁、拆的时候怎么收干净，全归它管。",
+      activeNodes: ["cordis", "parts"],
+      activeEdges: ["cordis->parts"],
       log: [
         { kind: "warn", text: 'plugin/wait { name=tool-files, missing=["tools"] }' },
         { kind: "ok", text: "plugin/start { name=tools }" },
         { kind: "ok", text: "plugin/start { name=tool-files }" },
+        { kind: "state", text: "这三行来自 npm run demo：依赖没齐的先等着，齐了才装" },
       ],
-      code: {
-        source: "demo/mini-harness/main.ts:23",
-        highlight: [4, 5],
-        content: `// 装配单。顺序随便写——依赖没齐的插件会自己排队等。
-// 这里故意把 tool-files 写在 tools 前面，你可以在运行记录里看到它等了一下。
-kernel.use(logger)
-kernel.use(toolFiles)
-kernel.use(tools)
-kernel.use(history)
-kernel.use(modelFake)
-kernel.use(approval)
-kernel.use(toolCount)`,
-        note: "七行，七块零件。顺序随便写，缺依赖的会自己排队等。",
-      },
-    },
-    {
-      id: "s2",
-      title: "内核把零件挂上",
-      detail:
-        "内核不认识模型，也不认识文件。它只做一件事：谁提供了什么，记在一个名字底下。以后别人报名字来取，取到的就是它。",
-      activeNodes: ["kernel", "model", "tools", "history"],
-      activeEdges: ["kernel->model", "kernel->tools", "kernel->history"],
-      log: [
-        { kind: "ok", text: "tool/register { name=read_file }" },
-        { kind: "ok", text: "tool/register { name=delete_file }" },
-        { kind: "ok", text: "plugin/start { name=history }" },
-        { kind: "ok", text: "plugin/start { name=model-fake }" },
-      ],
-      code: {
-        source: "demo/mini-harness/kernel.ts:176",
-        highlight: [3, 12],
-        content: `/** 把一个能力挂上去，别人按名字取用 */
-provide(name: string, value: unknown): void {
-  this.kernel.setService(name, value)
-  this.scope.provided.push(name)
-}
-
-/** 按名字取一个能力。取不到就报错，因为多半是忘了写 needs。 */
-get<T>(name: string): T {
-  if (!this.kernel.hasService(name)) {
-    throw new Error(\`没有找到服务 "\${name}"。是不是忘了在 needs 里声明？\`)
-  }
-  return this.kernel.getService(name) as T
-}`,
-        note: "provide 挂上去，get 按名字取。隔着一个名字，两边谁也不认识谁。",
-      },
     },
     {
       id: "s3",
-      title: "一句话进来",
+      title: "连主循环也能换掉",
       detail:
-        "用户敲了一句话。它先被记进会话，再交给循环。从这一刻起，剩下的活都归循环安排。循环自己不干活，它只知道该找谁。",
-      activeNodes: ["user", "loop", "history"],
-      activeEdges: ["user->loop", "loop->history"],
+        "转圈问模型的那段流程，也是一件挂在名字底下的服务，可以整个换掉。它自己把这条写成一句话：一切皆插件，循环也不例外。",
+      activeNodes: ["cordis", "loop"],
+      activeEdges: ["cordis->loop"],
       log: [
-        { kind: "state", text: "history/add { role=user, count=1 }" },
-        { kind: "event", text: "step/start { step=1 }" },
-        { kind: "call", text: "model/request { round=1, toolCount=3, messageCount=1 }" },
+        { kind: "ok", text: "plugin/start { name=loop }" },
+        { kind: "state", text: "这行来自 npm run demo：主循环和审批、日志一样被装上去" },
+        { kind: "state", text: "换掉它，就是把这个名字底下的实现换成另一份" },
+        { kind: "state", text: "容器不用改，别的插件也不用改，它们只认名字" },
       ],
-      code: {
-        source: "demo/mini-harness/loop.ts:18",
-        highlight: [2, 3, 4],
-        content: `export async function runTurn(ctx: Context, userText: string): Promise<string> {
-  const history = ctx.get<History>('history')
-  const model = ctx.get<Model>('model')
-  const tools = ctx.get<Tools>('tools')
-  // ...
-  history.add({ role: 'user', text: userText })
-
-  for (let step = 1; step <= MAX_STEPS; step++) {`,
-        note: "开头三行就是循环的全部家当：历史、模型、工具，都按名字取。",
-      },
     },
     {
       id: "s4",
-      title: "循环去问模型",
+      title: "一张单子决定装哪几件",
       detail:
-        "模型没有记忆。所以每问一次，循环都要把整段历史重新拼一遍。工具说明书也一起发过去。第一轮只有 1 条消息，第二轮就有 3 条。",
-      activeNodes: ["loop", "history", "model"],
-      activeEdges: ["loop->history", "loop->model"],
+        "单子不是写死的一份，是叠出来的：底座一层，用户自己再盖一层，只改在意的那项。同一套零件，叠法不同，装出来的东西就不同。",
+      activeNodes: ["profile", "cordis", "dsh"],
+      activeEdges: ["profile->cordis", "parts->dsh", "loop->dsh"],
       log: [
-        { kind: "call", text: "model/request { round=1, toolCount=3, messageCount=1 }" },
-        { kind: "state", text: "history/add { role=assistant, count=2 }" },
-        { kind: "event", text: "step/start { step=2 }" },
-        { kind: "call", text: "model/request { round=2, toolCount=3, messageCount=3 }" },
+        { kind: "state", text: 'approval/config { deny=["delete_file"] }' },
+        { kind: "warn", text: "tool/blocked { name=delete_file, reason=用户拒绝了这次操作。 }" },
+        { kind: "state", text: "approval/config { deny=[] }" },
+        { kind: "io", text: "tool/after { name=delete_file, output=已删除 notes.txt }" },
+        { kind: "state", text: "同一份剧本跑两遍，零件一件没换，只有上面盖的那层不同" },
       ],
-      code: {
-        source: "demo/mini-harness/loop.ts:29",
-        highlight: [2, 5],
-        content: `// 每一步都重新拼一份完整输入。模型不记得上一步，全靠这里喂给它。
-const reply = await model.ask({
-  system: SYSTEM,
-  tools: tools.list(),
-  messages: history.all(),
-})
-history.add(reply)`,
-        note: "循环只说 model.ask，不认识是哪一家的模型。换一家，改的是别的文件。",
-      },
     },
     {
       id: "s5",
-      title: "循环派工具干活",
+      title: "你写的和自带的同一种",
       detail:
-        "模型说它要调 read_file，参数是 notes.txt。它只是说说。真去读的是工具那一块。循环拿着名字去登记处找，找到了才执行。",
-      activeNodes: ["loop", "tools"],
-      activeEdges: ["loop->tools"],
+        "你写的插件挂上去的方式，和自带的那些完全一样：同一个容器，同一张单子。没有内置和外挂之分，只有装了和没装。",
+      activeNodes: ["cordis", "yours", "dsh"],
+      activeEdges: ["cordis->yours", "yours->dsh"],
       log: [
-        { kind: "call", text: 'tool/before { name=read_file, args={"path":"notes.txt"} }' },
-        { kind: "io", text: "tool/after { name=read_file, output=记得写测试 }" },
-        { kind: "state", text: "history/add { role=tool, count=3 }" },
+        { kind: "ok", text: "plugin/start { name=tools }" },
+        { kind: "ok", text: "plugin/start { name=tool-count }" },
+        { kind: "ok", text: "tool/register { name=count_files }" },
+        { kind: "state", text: "上面头两行，一个是自带的、一个是后加的，走的是同一条路" },
       ],
-      code: {
-        source: "demo/mini-harness/plugins/tools.ts:16",
-        highlight: [2, 9],
-        content: `const service: Tools = {
-  register(tool) {
-    registry.set(tool.name, tool)
-    ctx.emit('tool/register', { name: tool.name })
-  },
-  list() {
-    return [...registry.values()]
-  },
-  find(name) {
-    return registry.get(name)
-  },
-}`,
-        note: "登记处就这么点东西。加一个工具不用改循环，删一个也不用。",
-      },
     },
     {
       id: "s6",
-      title: "结果存回会话",
+      title: "换到 Claude Code 那边",
       detail:
-        "工具跑完，结果被当成一条新消息存进会话。下一轮问模型时，它自己就看到了。模型的记性不在模型里，在会话这一块。",
-      activeNodes: ["tools", "loop", "history", "model"],
-      activeEdges: ["loop->history", "loop->model"],
+        "同一个自己写的工具，在那边只能站在产品外面：跑在你自己的进程里，按一份公开协议接进去。协议不属于哪一家，进程边界是白给的。",
+      activeNodes: ["yours", "cc"],
+      activeEdges: ["yours->cc"],
       log: [
-        { kind: "state", text: "history/add { role=tool, count=3 }" },
-        { kind: "call", text: "model/request { round=2, toolCount=3, messageCount=3 }" },
-        { kind: "call", text: "model/request { round=4, toolCount=3, messageCount=7 }" },
-        { kind: "ok", text: "turn/end { step=4 }" },
+        { kind: "state", text: "这份公开协议叫 MCP，全称 Model Context Protocol" },
+        { kind: "state", text: "MCP 不是那边独有的，这边也接，进的是同一张工具表" },
+        { kind: "state", text: "那边的接法还有钩子：配置里的一条命令，走的是另一套" },
+        { kind: "warn", text: "这两套外挂，和产品自己内置的那套，是三种不同的东西" },
+        { kind: "warn", text: "这一步没有代码可看：那边的产品内部不开源" },
       ],
-      code: {
-        source: "demo/mini-harness/plugins/history.ts:16",
-        highlight: [3, 8],
-        content: `const service: History = {
-  add(message) {
-    messages.push(message)
-    ctx.emit('history/add', { role: message.role, count: messages.length })
-  },
-  all() {
-    // 给一份拷贝，别人改不动这里面的东西
-    return [...messages]
-  },
-}`,
-        note: "会话就是一个数组：加一条，全取出来。模型的记性全在这儿。",
-      },
     },
     {
       id: "s7",
-      title: "拆掉一块试试",
+      title: "两边各自要付的账",
       detail:
-        "跑完之后拆掉 tool-count 这一块。内核记着它挂过什么、留过什么清理动作，一起收干净。别的块照跑，一行都不用改。",
-      activeNodes: ["main", "kernel", "tools"],
-      activeEdges: ["main->kernel", "kernel->tools"],
+        "那边的账：你加的东西和内置的不是同一种，能接的位置由产品定。这边的账：单子归你维护，少装一件不会当场报错。",
+      activeNodes: ["profile", "cordis", "yours"],
+      activeEdges: ["profile->cordis"],
       log: [
-        { kind: "state", text: "count/bye { calls=1 }" },
-        { kind: "state", text: "plugin/remove { name=tool-count }" },
+        { kind: "warn", text: "少装一件，装载器不吭声：依赖它的插件只会挂在那儿等" },
+        { kind: "state", text: "还在排队等依赖的： 没有" },
+        { kind: "state", text: "这行是 npm run demo 打的名单。少装一件，名单上就有东西了" },
+        { kind: "state", text: "想自己看：从 demo/mini-harness/main.ts 的底座层删掉 tools 再跑" },
       ],
-      code: {
-        source: "demo/mini-harness/kernel.ts:70",
-        highlight: [8, 9],
-        content: `/** 拆一个插件。它挂的服务、登记的清理函数，全部回收。 */
-remove(name: string): void {
-  const index = this.scopes.findIndex((scope) => scope.plugin.name === name)
-  if (index === -1) return
-  const scope = this.scopes[index]
-
-  // 倒着执行清理函数：后登记的先收，和装的时候反过来
-  for (let i = scope.cleanups.length - 1; i >= 0; i--) scope.cleanups[i]()
-  for (const serviceName of scope.provided) this.services.delete(serviceName)
-
-  scope.active = false
-  this.scopes.splice(index, 1)
-  this.announce('plugin/remove', { name })
-}`,
-        note: "内核记着每块地上有什么，拆的时候按这块地收，不用你自己记。",
-      },
     },
   ],
   misconceptions: [
     {
-      wrong: "内核越强大越好，功能都塞进内核最省事。",
+      wrong: "demo 里那几个文件，就是 DeepSeek Harness 的结构。",
       right:
-        "反过来。demo 的内核里，读文件、跑模型、问权限，一件都没有。它只管装卸和回收。塞进内核的东西，以后想换就得改内核，一改就牵动所有人。",
+        "形状是对的，规模差得远。两边用的是同一套办法：插件挂在名字底下、依赖没齐的先排队、拆掉时按登记回收、循环也在装配单上。差别在每一块里面。真货的组装单是磁盘上的配置文件，改了不用重启，插件按名字从磁盘装，不像 demo 这样 import 进来；一次工具调用要过好几道关，不是一道。骨架的形状是对的，别把骨架当成全部。",
     },
     {
-      wrong: "循环里总得写清楚这次用的是哪家模型。",
+      wrong: "既然什么都能换，这套东西就没有固定的部分。",
       right:
-        "循环里只有一句 model.ask(...)，一个厂商名字都没出现。具体跟谁说话，是 model-fake.ts 那一块的事。换一家模型，改那一个文件，循环一行不动。",
+        "有。插件容器本身不在容器里，它是底座，装不进自己。还有服务名：工具登记表挂在一个名字底下，同一套装配里只有一份，谁提供了它，全体插件取到的就是它。换掉这份实现可以；两份同时挂，后挂的会不声不响盖掉先挂的，你收不到任何提示。这类东西不是配置项，是定死的。",
     },
     {
-      wrong: "真实的 Harness 那么复杂，肯定不是这么分的。",
+      wrong: "它和 Claude Code 是同一个东西的两种写法，功能迟早会对齐。",
       right:
-        "真实的确复杂得多：真的网络请求、流式返回、上下文太长时的压缩、崩溃后恢复会话、并发工具调用。但复杂度是长在每一块里面的，不是又多出几块。骨架还是这几块。",
+        "功能清单上两边确实在互相靠近：工具调用、审批、子 Agent，现在两边都有。但「你能不能换掉主流程」这一条由边界位置决定，功能追平了它也不会变。那边的扩展口是产品留的，产品自己那部分不对你开放。这边也有换不掉的东西（上一条那些），但那是架构上定死的，跟「这块归产品，不给你碰」是两回事。",
     },
   ],
   takeaways: [
     {
-      title: "六块零件速查",
-      intro: "一句话记住每块管什么，以及想改它时该打开哪个文件。",
+      title: "三层分别是什么",
+      intro: "以后读到「DeepSeek Harness」，先分清说的是哪一层。",
       items: [
         {
-          label: "内核",
-          text: "把插件装上、把依赖接齐、拆的时候收干净。不做任何具体功能。",
+          label: "插件容器",
+          text: "提供「装插件」这件事本身：挂上一个服务、等依赖齐了再启动、拆掉时按登记回收。它是一个通用开源框架，叫 Cordis，不是为这个 agent 专门写的。",
           hint: "demo/mini-harness/kernel.ts",
         },
         {
-          label: "循环",
-          text: "一句话进来后转圈：问模型、执行工具、结果回灌、再问，直到模型不再要工具。",
-          hint: "demo/mini-harness/loop.ts",
+          label: "零件库",
+          text: "站在容器上的几十件插件：模型接入、工具、会话、权限，还有一堆这一节没展开的。文档里说的 SDK（software development kit，零件库）指的就是这一层。",
         },
         {
-          label: "模型接入",
-          text: "唯一跟模型说话的地方。换一家模型，只改这一个文件。",
-          hint: "demo/mini-harness/plugins/model-fake.ts",
+          label: "产品",
+          text: "照着一张单子，从零件库里挑几件装到一起，跑起来就是你用的那个编程 agent，命令叫 dsh。换一张单子，同一套零件装出另一种形态：一种带浏览器界面，一种跑完一个任务就退出。",
+          hint: "demo/mini-harness/profile.ts",
+        },
+      ],
+    },
+    {
+      title: "两边各自的账",
+      intro: "没有哪边天然更高级。下面六条按「你要付出什么」排，不按「谁更强」排。",
+      items: [
+        {
+          label: "那边：装上就能用",
+          text: "不用先学怎么写单子。装完就是一个完整产品，命令行、桌面、网页、编辑器插件几种壳换着用。",
         },
         {
-          label: "工具",
-          text: "模型能动手的那些能力。登记处管名单，每个工具各写各的。",
-          hint: "demo/mini-harness/plugins/tools.ts 与同目录的 tool-files.ts",
+          label: "那边：外挂和内置不是同一种",
+          text: "外部工具按公开协议跑在别的进程里，钩子是配置里的一条命令，内置工具是产品自己的代码。三套机制不一样，能做的事也不一样，接口有几个、开在哪由产品决定。",
         },
         {
-          label: "会话",
-          text: "模型没记性，全靠它存着。每次问模型前，整段历史重新念一遍。",
-          hint: "demo/mini-harness/plugins/history.ts",
+          label: "两边都有：MCP 这条路",
+          text: "MCP（Model Context Protocol）是公开的，由 Anthropic 提出，不属于哪一家产品。你写一个 MCP 服务，好几家 agent 产品都能用，DeepSeek Harness 也接它，进的是同一张工具表。它跑在自己的进程里，天然多一道边界，同进程的插件没有这道边界。",
         },
         {
-          label: "装配单",
-          text: "决定这次装哪几块。加功能加一行，去功能删一行，别处不用动。",
-          hint: "demo/mini-harness/main.ts",
+          label: "这边：多一个选项，写成进程内插件",
+          text: "同一个容器、同一张单子、同一种写法。想拦一次工具调用，你写的插件和自带的审批站在同一位置。代价是没有那道进程边界。",
+          hint: "demo/mini-harness/plugins/approval.ts",
+        },
+        {
+          label: "这边：单子归你维护",
+          text: "装什么、装几件、少装了谁，都要自己盯。装载器不会替你报错，它只把缺依赖的那件挂起来等着。",
+          hint: "demo/mini-harness/kernel.ts · pending()",
+        },
+        {
+          label: "这边：排查链路更长",
+          text: "一个行为不对，先看单子这次装了谁，再看是哪件插件在监听。比翻一个配置开关远得多。",
         },
       ],
     },
   ],
   quiz: [
     {
-      question: "想把这个 demo 接上真的模型，最少要动哪里？",
+      question: "同事说「我们直接上 DeepSeek Harness 就行」。要听懂这句话，缺的是哪个信息？",
       options: [
-        "循环、工具、会话都得跟着改一遍",
-        "只改 model-fake.ts 那一块，循环一行不用动",
-        "先改内核，让它认识新模型",
+        "他说的是拿现成产品来用，还是拿零件库自己装一个",
+        "他打算接哪一家的模型",
+        "他要的是命令行版还是网页版",
       ],
-      answer: 1,
+      answer: 0,
       explain:
-        "循环只调用 model.ask(...)，不认识背后是谁。跟模型说话的代码全在那一个文件里，换掉它就行；内核根本不碰模型。",
+        "这个名字同时指零件库和用零件装出来的产品。当成产品，是装好就能用；当成零件库，是自己写一张单子挑零件。两条路要做的事完全不一样，先问清是哪条。",
+      wrongExplains: [
+        "",
+        "模型只是其中一件插件，换它只动那一件。这个信息补上了，仍然听不出他要走哪条路。",
+        "这两种形态都是同一套零件按不同单子装出来的。选哪个形态，是决定了走「用现成产品」这条路之后才轮到的问题。",
+      ],
     },
     {
-      question: "装配单里 tool-files 写在 tools 前面，运行时会怎样？",
+      question: "「一切皆插件，循环也不例外」落到具体上是什么意思？",
       options: [
-        "报错，因为它要用的 tools 这时候还不存在",
-        "tool-files 先排队等着，tools 装好后内核回头把它装上",
-        "内核先把这两行的顺序调换过来，再往下走",
+        "循环里的每一步都能被别的插件监听到",
+        "转圈问模型那段流程也是挂在名字底下的服务，可以整个换成另一份实现",
+        "循环最多跑几轮，可以在配置里改",
       ],
       answer: 1,
       explain:
-        "内核先把插件收进队列，依赖齐了才真装。运行记录第一行 plugin/wait 是它在等，第三行 plugin/start 才是它装上。文件本身没被动过。",
+        "服务是按名字取的：谁提供了那个名字，用的就是谁。主循环占着其中一个名字，换掉它就是把整段流程换成另一份实现，容器和别的插件都不用动。npm run demo 里那行 plugin/start { name=loop } 就是它被装上去的时刻。",
+      wrongExplains: [
+        "监听确实做得到，但那是在原来那段流程上挂东西，流程本身没换。这句话说的是把整段流程换掉。",
+        "",
+        "改轮数是调一个参数，那段流程一行都没变。这句话说的是那段流程本身可以整个换掉。",
+      ],
     },
   ],
+  evidence: "定位说法出自 DeepSeek Harness 自带文档",
   bridge:
-    "这一节把活分给了六块。下一节看一个更狠的问题：这些块凭什么能随便加、随便拆？答案是它们都是插件，连审批和日志也不例外。",
+    "上面那些运行记录，是一个真跑得起来的最小 Harness 吐出来的。下一节你自己跑一遍，然后一行行读：哪一行是容器在装插件，哪一行是模型说的，哪一行是插件真的动了手。",
 };
