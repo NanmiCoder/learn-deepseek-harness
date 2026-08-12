@@ -27,23 +27,25 @@ export function RunLog({ steps, currentStep }: { steps: LessonStep[]; currentSte
   const visible = steps.slice(0, currentStep + 1);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="flex h-full min-h-0 min-w-0 flex-col">
       <div className="flex items-center justify-between px-1 pb-2">
-        <span className="text-[11px] font-semibold text-[var(--ink-3)]">运行记录</span>
+        <span className="text-[11px] font-semibold text-[var(--ink-2)]">运行记录</span>
         <span className="font-mono text-[9px] text-[var(--ink-4)]">
           {visible.reduce((total, step) => total + step.log.length, 0)} 行
         </span>
       </div>
 
       <div
-        className="soft-inset thin-scroll min-h-0 flex-1 overflow-y-auto rounded-2xl bg-[#fbfdfc] p-2"
+        className="soft-inset thin-scroll min-h-0 flex-1 overflow-y-auto rounded-[1.25rem] px-1 py-2"
         ref={scrollRef}
       >
         {visible.map((step, stepIndex) => {
           const isCurrent = stepIndex === currentStep;
           return (
-            <div className={isCurrent ? "" : "opacity-45"} key={step.id}>
-              {stepIndex > 0 && <div className="mx-2 my-1.5 h-px bg-[var(--line-soft)]" />}
+            <div className={isCurrent ? "" : "opacity-60"} key={step.id}>
+              <div className={`px-3 pb-1 pt-2 text-[10px] font-semibold ${isCurrent ? "text-[var(--hot)]" : "text-[var(--ink-4)]"} ${stepIndex > 0 ? "mt-1.5 border-t border-[var(--line-soft)]" : ""}`}>
+                {String(stepIndex + 1).padStart(2, "0")} {step.title}
+              </div>
               {step.log.map((line, lineIndex) => (
                 <motion.div
                   animate={{ opacity: 1, x: 0 }}

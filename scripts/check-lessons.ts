@@ -6,6 +6,7 @@
  * 跑法：npm run check
  */
 import { lessons } from "../src/lessons";
+import { buildDiagramFrame, buildFlowGroups, edgeKey } from "../src/tutorial/diagramFrames";
 
 declare const process: { exit(code: number): never };
 
@@ -240,6 +241,47 @@ for (const lesson of lessons) {
   for (const key of edgeKeys) {
     if (!touchedEdges.has(key)) warn(at, `连线 "${key}" 从头到尾都没被点亮过`);
   }
+
+  // 渐进披露体检：未来关系不能偷跑，当前节拍只能讲一个动作。
+  lesson.steps.forEach((step, stepIndex) => {
+    const groups = buildFlowGroups(step, lesson.stage.edges);
+    const previousEdges = new Set(lesson.steps.slice(0, stepIndex).flatMap((item) => item.activeEdges));
+
+    groups.forEach((group, beatIndex) => {
+      const where = `${at} 步骤${stepIndex + 1} 动作${beatIndex + 1}`;
+      const frame = buildDiagramFrame(lesson, stepIndex, beatIndex);
+      const expectedRevealed = new Set(previousEdges);
+      groups.slice(0, beatIndex + 1).flat().forEach((edge) => expectedRevealed.add(edgeKey(edge)));
+      const actualRevealed = new Set(frame.revealedEdges);
+
+      if (frame.currentEdges.length !== group.length) {
+        fail(where, `当前连线 ${frame.currentEdges.length} 条，与动作组 ${group.length} 条不一致`);
+      }
+      if (actualRevealed.size !== expectedRevealed.size || [...actualRevealed].some((key) => !expectedRevealed.has(key))) {
+        fail(where, "出现了尚未发生的未来连线");
+      }
+      if (frame.currentEdges.some((key) => !actualRevealed.has(key))) {
+        fail(where, "当前连线没有包含在已揭示连线中");
+      }
+      if (!frame.actionText.trim()) fail(where, "当前动作说明是空的");
+
+      if (group.length > 1) {
+        const labels = new Set(group.map((edge) => edge.label));
+        const sameSource = group.every((edge) => edge.from === group[0].from);
+        const sameTarget = group.every((edge) => edge.to === group[0].to);
+        if (labels.size > 1 || (!sameSource && !sameTarget)) {
+          fail(where, "一个动作节拍里混进了不同语义的连线");
+        }
+      }
+    });
+  });
+
+  const overview = buildDiagramFrame(lesson, lesson.steps.length, 0);
+  if (overview.currentEdges.length > 0 || overview.currentNodes.length > 0) {
+    fail(at, "总览不应该保留当前高亮或运动点");
+  }
+  if (overview.edges.some((edge) => edge.label)) fail(at, "总览连线不应该常驻动作文字");
+  if (overview.edges.length > 9) fail(at, `总览有 ${overview.edges.length} 条关系，超过清晰阅读上限 9 条`);
 
   // 完成检查
   if (lesson.quiz.length === 0) fail(at, "没有完成检查题");

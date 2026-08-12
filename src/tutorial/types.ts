@@ -26,6 +26,8 @@ export interface StageNode {
   /** 第几行，从 0 开始 */
   row: number;
   kind: NodeKind;
+  /** 覆盖节点眉标。真实业务图里可写「主控」「子 Agent」等角色。 */
+  kindLabel?: string;
 }
 
 export interface StageEdge {
@@ -125,18 +127,35 @@ export interface Lesson {
   readingMinutes: number;
   /** 不超过 40 字，读完要有画面感 */
   oneLiner: string;
+  /** 真实案例可让交互图先于类比和概念出现。 */
+  architectureFirst?: boolean;
   /** 生活化类比，150 字以内 */
   analogy: string;
   concepts: ConceptRow[];
   stage: {
     nodes: StageNode[];
     edges: StageEdge[];
+    /** 可选的列泳道标题，与图的 col 一一对应。 */
+    columnLabels?: string[];
+    /** 可选的图例文案覆盖。 */
+    legendLabels?: Partial<Record<NodeKind, string>>;
+    /** 移动端保持图的可读宽度，允许在图内横向查看。 */
+    scrollOnMobile?: boolean;
+    /** 最后一帧的关系级总览。省略时会自动合并双向边并复用主图节点。 */
+    overview?: {
+      nodes: StageNode[];
+      edges: StageEdge[];
+      columnLabels?: string[];
+      summary?: string;
+    };
   };
   steps: LessonStep[];
   misconceptions: Misconception[];
   /** 可选的课后补充，渲染成可折叠的速查区 */
   takeaways?: Takeaway[];
   quiz: QuizItem[];
+  /** 无代码步骤可用这行说明证据来源。 */
+  evidence?: string;
   /** 学完这节后带着什么问题进入下一节 */
   bridge?: string;
 }

@@ -3,13 +3,32 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#e9f1f2" />
     <meta name="robots" content="noindex, nofollow" />
     <meta
       name="description"
-      content="七节课，从零读懂 DeepSeek Harness：它是什么、怎么组成、为什么一切皆插件、怎么跟外界打交道、怎么写插件、跟 Claude Code 差在哪、底层的 Cordis 是什么。"
+      content="八节课，从零读懂 DeepSeek Harness：从插件与工具调用，到三个 Agent 协作完成一个真实 ToDo 网站案例。"
     />
     <title>读懂 DeepSeek Harness</title>
+    <script>
+      (() => {
+        try {
+          const saved = window.localStorage.getItem("dsh-theme");
+          const theme = saved === "light" || saved === "dark"
+            ? saved
+            : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+          document.querySelector('meta[name="theme-color"]')?.setAttribute(
+            "content",
+            theme === "dark" ? "#06171d" : "#e9f1f2",
+          );
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

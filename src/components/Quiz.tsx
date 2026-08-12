@@ -38,10 +38,10 @@ export function Quiz({
   }
 
   return (
-    <section aria-labelledby={`quiz-${lessonId}`} className="soft-panel rounded-[1.75rem] bg-white/62 p-5 backdrop-blur-xl sm:p-6">
+    <section aria-labelledby={`quiz-${lessonId}`} className="soft-panel rounded-[1.75rem] p-5 backdrop-blur-2xl sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-[var(--mint-soft)] text-[var(--mint-deep)]">
+          <span className="grid h-9 w-9 place-items-center rounded-2xl bg-[var(--teal-soft)] text-[var(--teal-deep)]">
             <SealCheck aria-hidden="true" size={18} weight="regular" />
           </span>
           <div>
@@ -55,7 +55,7 @@ export function Quiz({
         <div className="flex items-center gap-2">
           {picked.some((value) => value !== null) && !allRight && (
             <button
-              className="soft-button flex items-center gap-1.5 rounded-xl bg-white/70 px-3 py-2 text-[11px] font-semibold text-[var(--ink-3)] active:scale-[0.97]"
+              className="soft-button flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-semibold text-[var(--ink-3)] active:scale-[0.97]"
               onClick={() => setPicked(items.map(() => null))}
               type="button"
             >
@@ -67,7 +67,7 @@ export function Quiz({
             {allRight && (
               <motion.span
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-1.5 rounded-full bg-[var(--mint-soft)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mint-deep)]"
+                className="flex items-center gap-1.5 rounded-full bg-[var(--teal-soft)] px-3 py-1.5 text-[11px] font-semibold text-[var(--teal-deep)]"
                 initial={{ opacity: 0, scale: 0.9 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
@@ -116,9 +116,9 @@ export function Quiz({
                       <span
                         className={`grid h-5 w-5 place-items-center rounded-lg font-mono text-[10px] font-bold ${
                           state === "right"
-                            ? "bg-[var(--mint)] text-white"
+                            ? "bg-[var(--teal)] text-white"
                             : state === "wrong"
-                              ? "bg-[#e0a173] text-white"
+                              ? "bg-[var(--hot)] text-white"
                               : "bg-[var(--line-soft)] text-[var(--ink-4)]"
                         }`}
                       >
@@ -146,7 +146,7 @@ export function Quiz({
                   >
                     <span
                       className={`mt-2.5 block rounded-2xl px-3 py-2.5 ${
-                        correct ? "bg-[var(--cyan-wash)]" : "bg-[#fdf4ec]"
+                        correct ? "bg-[var(--teal-wash)]" : "bg-[var(--hot-wash)]"
                       }`}
                     >
                       {correct ? item.explain : "这个不对。回到上面的分步演示再走一遍，注意每一步的运行记录。"}

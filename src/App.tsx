@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, List, Path, X } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowRight, Check, List, Moon, Sun, X } from "@phosphor-icons/react";
 import { lessons } from "./lessons";
 import { LessonView } from "./tutorial/LessonView";
 
 const STORAGE_KEY = "dsh-course-progress-v3";
+const THEME_STORAGE_KEY = "dsh-theme";
+
+type Theme = "light" | "dark";
+
+function initialTheme(): Theme {
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
 
 function lessonIdFromHash(): string {
   const hash = decodeURIComponent(window.location.hash.slice(1));
@@ -25,28 +32,28 @@ function Sidebar({
   return (
     <>
       <div className="flex items-center gap-3 px-1">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#7fd3dd] to-[#5ed69a] text-white shadow-[0_10px_20px_rgba(72,201,154,0.22)]">
-          <Path aria-hidden="true" size={22} weight="regular" />
+        <span className="brand-mark grid h-11 w-11 shrink-0 place-items-center rounded-2xl text-[17px] font-bold text-white">
+          H
         </span>
         <span className="min-w-0">
           <span className="block truncate text-[15px] font-semibold tracking-[-0.03em] text-[var(--ink)]">
             读懂 DeepSeek Harness
           </span>
-          <span className="mt-0.5 block text-[10px] text-[var(--ink-4)]">七节课，从零开始</span>
+          <span className="mt-0.5 block text-[10px] text-[var(--ink-4)]">{lessons.length} 节课，从零开始</span>
         </span>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-white/55 px-4 py-3.5">
+      <div className="sidebar-progress mt-6 rounded-[1.125rem] px-4 py-3.5">
         <div className="flex items-baseline justify-between">
           <span className="text-[11px] font-semibold text-[var(--ink-3)]">学习进度</span>
           <span className="font-mono text-[11px] font-semibold text-[var(--mint-deep)]">
             {done.size}/{lessons.length}
           </span>
         </div>
-        <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[#e3eeea]">
+        <div className="progress-track mt-2.5 h-1.5 overflow-hidden rounded-full">
           <motion.div
             animate={{ width: `${percent}%` }}
-            className="h-full rounded-full bg-gradient-to-r from-[#5ccfb0] to-[#2fc47a]"
+            className="progress-fill h-full rounded-full"
             initial={false}
             transition={{ type: "spring", stiffness: 160, damping: 24 }}
           />
@@ -64,14 +71,14 @@ function Sidebar({
                 <button
                   aria-current={active ? "page" : undefined}
                   className={`group relative grid w-full grid-cols-[30px_1fr] items-start gap-2.5 rounded-2xl px-3 py-3 text-left transition-colors active:scale-[0.99] ${
-                    active ? "" : "hover:bg-white/55"
+                    active ? "" : "sidebar-lesson-button--idle"
                   }`}
                   onClick={() => onPick(lesson.id)}
                   type="button"
                 >
                   {active && (
                     <motion.span
-                      className="absolute inset-0 rounded-2xl border border-white/90 bg-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.95),7px_8px_18px_rgba(157,175,175,0.12)]"
+                      className="sidebar-active-surface absolute inset-0 rounded-2xl"
                       layoutId="sidebar-active"
                       transition={{ type: "spring", stiffness: 210, damping: 26 }}
                     />
@@ -79,10 +86,10 @@ function Sidebar({
                   <span
                     className={`relative grid h-[26px] w-[26px] place-items-center rounded-xl font-mono text-[10px] font-bold transition-colors ${
                       finished
-                        ? "bg-[var(--mint)] text-white"
+                        ? "bg-[var(--teal)] text-white"
                         : active
                           ? "bg-[var(--mint-soft)] text-[var(--mint-deep)]"
-                          : "bg-white/70 text-[var(--ink-4)]"
+                          : "sidebar-index-surface text-[var(--ink-4)]"
                     }`}
                   >
                     {finished ? <Check aria-hidden="true" size={13} weight="bold" /> : lesson.index}
@@ -104,9 +111,9 @@ function Sidebar({
         </ol>
       </nav>
 
-      <div className="mt-4 rounded-2xl border border-white/80 bg-white/45 p-3.5">
+      <div className="sidebar-note mt-4 rounded-[1.125rem] p-3.5">
         <div className="flex items-center gap-2 text-[11px] font-semibold text-[var(--ink-3)]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[var(--mint)]" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--teal)]" />
           内部资料
         </div>
         <p className="mt-1.5 text-[10px] leading-relaxed text-[var(--ink-4)]">
@@ -121,7 +128,15 @@ export function App() {
   const [activeId, setActiveId] = useState<string>(lessonIdFromHash);
   const [done, setDone] = useState<Set<string>>(() => new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    themeColor?.setAttribute("content", theme === "dark" ? "#06171d" : "#e9f1f2");
+  }, [theme]);
 
   useEffect(() => {
     try {
@@ -163,6 +178,18 @@ export function App() {
     });
   }, []);
 
+  const toggleTheme = useCallback(() => {
+    setTheme((current) => {
+      const nextTheme = current === "light" ? "dark" : "light";
+      try {
+        window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      } catch {
+        // Private browsing can reject storage; the in-memory theme still works.
+      }
+      return nextTheme;
+    });
+  }, []);
+
   const index = lessons.findIndex((lesson) => lesson.id === activeId);
   const lesson = lessons[index];
   const previous = lessons[index - 1];
@@ -170,8 +197,8 @@ export function App() {
 
   return (
     <div className="min-h-[100dvh] bg-[var(--paper)] p-2 text-[var(--ink)] sm:p-3 lg:p-4">
-      <div className="tutorial-shell mx-auto flex min-h-[calc(100dvh-1rem)] max-w-[1560px] overflow-hidden rounded-[1.75rem] bg-white/38 sm:min-h-[calc(100dvh-1.5rem)] sm:rounded-[2.25rem] lg:h-[calc(100dvh-2rem)] lg:min-h-0">
-        <aside className="soft-sidebar hidden w-[288px] shrink-0 flex-col border-r border-white/75 bg-[#f8fcfa]/75 p-5 backdrop-blur-2xl lg:flex">
+      <div className="tutorial-shell mx-auto flex h-[calc(100dvh-1rem)] min-h-0 max-w-[1560px] overflow-hidden rounded-[1.75rem] sm:h-[calc(100dvh-1.5rem)] sm:rounded-[2rem] lg:h-[calc(100dvh-2rem)]">
+        <aside className="soft-sidebar hidden w-[284px] shrink-0 flex-col p-5 backdrop-blur-3xl lg:flex">
           <Sidebar activeId={activeId} done={done} onPick={pick} />
         </aside>
 
@@ -179,14 +206,14 @@ export function App() {
           {drawerOpen && (
             <motion.div
               animate={{ opacity: 1 }}
-              className="fixed inset-0 z-30 bg-[#bdd4ce]/55 p-3 backdrop-blur-md lg:hidden"
+              className="fixed inset-0 z-30 bg-[#014e60]/24 p-3 backdrop-blur-sm lg:hidden"
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
               onClick={() => setDrawerOpen(false)}
             >
               <motion.aside
                 animate={{ x: 0 }}
-                className="soft-panel flex h-full w-[min(88vw,320px)] flex-col rounded-[1.75rem] bg-[#f8fcfa] p-5"
+                className="soft-panel flex h-full w-[min(88vw,320px)] flex-col rounded-[1.75rem] p-5"
                 exit={{ x: -24 }}
                 initial={{ x: -24 }}
                 onClick={(event) => event.stopPropagation()}
@@ -195,7 +222,7 @@ export function App() {
                 <div className="mb-3 flex justify-end">
                   <button
                     aria-label="关闭课程目录"
-                    className="soft-button grid h-9 w-9 place-items-center rounded-xl bg-white/80 active:scale-95"
+                    className="soft-button grid h-11 w-11 place-items-center rounded-xl active:scale-95"
                     onClick={() => setDrawerOpen(false)}
                     type="button"
                   >
@@ -209,11 +236,11 @@ export function App() {
         </AnimatePresence>
 
         <section className="flex min-w-0 flex-1 flex-col">
-          <header className="flex min-h-[62px] shrink-0 items-center justify-between gap-3 border-b border-white/75 bg-white/32 px-4 backdrop-blur-xl sm:px-6">
+          <header className="app-chrome flex min-h-[60px] shrink-0 items-center justify-between gap-3 px-4 backdrop-blur-xl sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 aria-label="打开课程目录"
-                className="soft-button grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/80 active:scale-95 lg:hidden"
+                className="soft-button grid h-11 w-11 shrink-0 place-items-center rounded-xl active:scale-95 lg:hidden"
                 onClick={() => setDrawerOpen(true)}
                 type="button"
               >
@@ -227,11 +254,35 @@ export function App() {
             </div>
             <div className="flex shrink-0 items-center gap-2.5">
               {done.has(lesson.id) && (
-                <span className="hidden items-center gap-1.5 rounded-full bg-[var(--mint-soft)] px-2.5 py-1 text-[10px] font-semibold text-[var(--mint-deep)] sm:inline-flex">
+                <span className="hidden items-center gap-1.5 rounded-full bg-[var(--teal-soft)] px-2.5 py-1 text-[10px] font-semibold text-[var(--teal-deep)] sm:inline-flex">
                   <Check aria-hidden="true" size={11} weight="bold" />
                   已完成
                 </span>
               )}
+              <button
+                aria-label={theme === "dark" ? "切换到浅色模式" : "切换到暗色模式"}
+                aria-pressed={theme === "dark"}
+                className="soft-button theme-toggle grid h-11 w-11 shrink-0 place-items-center rounded-xl"
+                onClick={toggleTheme}
+                title={theme === "dark" ? "切换到浅色模式" : "切换到暗色模式"}
+                type="button"
+              >
+                <AnimatePresence initial={false} mode="wait">
+                  <motion.span
+                    animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                    exit={{ opacity: 0, rotate: theme === "dark" ? -45 : 45, scale: 0.7 }}
+                    initial={{ opacity: 0, rotate: theme === "dark" ? 45 : -45, scale: 0.7 }}
+                    key={theme}
+                    transition={{ duration: 0.18 }}
+                  >
+                    {theme === "dark" ? (
+                      <Sun aria-hidden="true" size={17} weight="regular" />
+                    ) : (
+                      <Moon aria-hidden="true" size={17} weight="regular" />
+                    )}
+                  </motion.span>
+                </AnimatePresence>
+              </button>
               <span className="font-mono text-[10px] text-[var(--ink-4)]">
                 {lesson.index}/{String(lessons.length).padStart(2, "0")}
               </span>
@@ -257,9 +308,9 @@ export function App() {
             </AnimatePresence>
           </div>
 
-          <footer className="grid min-h-[62px] shrink-0 grid-cols-2 border-t border-white/75 bg-white/32 backdrop-blur-xl">
+          <footer className="app-chrome grid min-h-[62px] shrink-0 grid-cols-2 backdrop-blur-xl">
             <button
-              className="flex items-center gap-2.5 px-4 text-left transition-colors hover:bg-white/45 disabled:cursor-not-allowed disabled:opacity-35 sm:px-6"
+              className="app-nav-button flex items-center gap-2.5 px-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-35 sm:px-6"
               disabled={!previous}
               onClick={() => previous && pick(previous.id)}
               type="button"
@@ -273,7 +324,7 @@ export function App() {
               </span>
             </button>
             <button
-              className="flex items-center justify-end gap-2.5 border-l border-white/75 px-4 text-right transition-colors hover:bg-white/45 disabled:cursor-not-allowed disabled:opacity-35 sm:px-6"
+              className="app-nav-button flex items-center justify-end gap-2.5 border-l border-[var(--border-glass)] px-4 text-right transition-colors disabled:cursor-not-allowed disabled:opacity-35 sm:px-6"
               disabled={!next}
               onClick={() => next && pick(next.id)}
               type="button"
