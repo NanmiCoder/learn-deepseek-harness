@@ -236,6 +236,11 @@ const answer = await ctx.get<Loop>('loop').run(first, '看看 notes.txt 写了�
       right:
         "它只认名字。demo/mini-harness/loop.ts 开头两行是 ctx.get('model') 和 ctx.get('tools')，整个文件没 import 过任何一个具体的模型或工具。换掉背后的实现，循环一行都不用改。",
     },
+    {
+      wrong: "一次对话就流过这几块，真实的也一样。",
+      right:
+        "块是这几类，但每一块里面厚得多。真实那套里，喂给模型的那包东西是每次现拼的：系统提示由多个插件各出一段，工具说明书跟着一起发。而且流过的东西不止喂模型这一条路——落盘、遥测、界面都在读同一份日志。第 15 节讲这条分界线。",
+    },
   ],
   takeaways: [
     {

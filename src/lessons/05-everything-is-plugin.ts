@@ -283,6 +283,11 @@ for (const plugin of standard.use) kernel.use(plugin, standard.config[plugin.nam
       right:
         "只有走 ctx 的那部分会。demo 最后拆掉计数插件，它塞进登记处的 count_files 还在——那笔注册没经过 ctx，插件自己也没写一句撤销。内核凭什么判断该收哪些，下一节讲。",
     },
+    {
+      wrong: "既然一切皆插件，那 DeepSeek Harness 里什么都能换。",
+      right:
+        "有换不得的。能换的是能力层：模型接哪家、有哪些工具、怎么审批、日志落到哪。换不得的是地基：容器的装卸回收、日志只追加这条规矩、服务接口的形状。这条边界第 17 节专门画，动手改之前值得先看那一节。",
+    },
   ],
   takeaways: [
     {
