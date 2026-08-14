@@ -15,7 +15,7 @@ export const harnessBasics: Lesson = {
   summary: "一句话问了模型 4 次",
   eyebrow: "基础认知",
   group: "know",
-  readingMinutes: 7,
+  readingMinutes: 8,
   oneLiner: "一个 agent 拆开就两半：一半是模型，只会输出文字；剩下那一半全是 harness。",
   positioning:
     "先把名字说清。一个 agent 拆开只有两半：一半是模型，它能看、能说，但手伸不出来，说完就忘。剩下那一半全是 harness——把整段对话重新念给它听的那层、真去读文件删文件的那层、危险动作先问你一句的那层、决定这次装哪几件的那张单子。harness 不是某一个部件，是模型以外的所有东西的总称。这一节先看它最日常的那次运转：你说一句话，它让模型真的动起来。",
@@ -196,16 +196,46 @@ export interface ToolCall {
     },
     {
       id: "s6",
+      title: "第二个工具也真跑了",
+      detail:
+        "第 2 步模型要的是 count_files。和 read_file 一样：它只写下名字和参数，真去数文件的是工具那一层。循环就是同一套流程再来一遍。",
+      activeNodes: ["model", "loop", "tool", "world"],
+      activeEdges: ["model->loop", "loop->tool", "tool->world"],
+      log: [
+        { kind: "state", text: "session/append { session=s1, seq=6, type=assistant }" },
+        { kind: "state", text: "这条消息带着一个 toolCall：{ name: count_files, args: {} }" },
+        { kind: "call", text: "tool/decide { name=count_files, args={} }" },
+        { kind: "call", text: "tool/before { name=count_files, args={} }" },
+        { kind: "io", text: "tool/after { name=count_files, output=工作区里有 2 个文件。（这个工具被调用了 1 次） }" },
+        { kind: "state", text: "session/append { session=s1, seq=7, type=tool }" },
+      ],
+      code: {
+        source: "demo/mini-harness/plugins/tool-count.ts:26",
+        highlight: [3],
+        content: `      async run() {
+        calls++
+        return \`工作区里有 2 个文件。（这个工具被调用了 \${calls} 次）\`
+      },`,
+        note: "第 3 行是真正干活的那一行。模型碰不到它。",
+      },
+    },
+    {
+      id: "s7",
       title: "危险的先问你",
       detail:
         "第 3 步模型要删文件。这个工具标了危险，动手前先问你一句。你说不行，拒绝理由就当成工具结果还给模型。",
       activeNodes: ["loop", "approval", "record"],
       activeEdges: ["loop->approval", "approval->loop"],
       log: [
+        { kind: "state", text: "session/append { session=s1, seq=8, type=step/start }" },
+        { kind: "call", text: "model/request { round=3, toolCount=5, messageCount=5 }" },
+        { kind: "state", text: "session/append { session=s1, seq=9, type=assistant }" },
+        { kind: "state", text: "这条消息带着一个 toolCall：{ name: delete_file, args: { path: notes.txt } }" },
         { kind: "call", text: 'tool/decide { name=delete_file, args={"path":"notes.txt"} }' },
         { kind: "io", text: "approval/ask { name=delete_file }" },
         { kind: "warn", text: "approval/deny { name=delete_file }" },
         { kind: "warn", text: "tool/blocked { name=delete_file, reason=用户拒绝了这次操作。 }" },
+        { kind: "state", text: "session/append { session=s1, seq=10, type=tool }" },
         { kind: "state", text: "这次没有 tool/before 也没有 tool/after：delete_file 一次都没跑" },
       ],
       code: {
@@ -220,7 +250,7 @@ export interface ToolCall {
       },
     },
     {
-      id: "s7",
+      id: "s8",
       title: "模型不要工具了",
       detail:
         "第 4 步模型只回了一句话，没再要工具。循环从这里返回，这个 turn 结束。这是正常出口，下面还有一个兜底出口。",
