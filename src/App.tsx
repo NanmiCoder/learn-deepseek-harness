@@ -257,10 +257,15 @@ function Sidebar({
         })}
       </nav>
 
-      {/* 代码出处由每节正文底部的落款负责（那处是现算的，不会失真）。这里只留保密提示。 */}
-      <p className="sidebar-note mt-3 rounded-[1.125rem] px-3 py-2 text-center text-[10px] text-[var(--ink-4)]">
-        内部资料
-      </p>
+      {/* 代码出处由每节正文底部的落款负责（那处是现算的，不会失真）。这里放仓库入口。 */}
+      <a
+        className="sidebar-note mt-3 block rounded-[1.125rem] px-3 py-2 text-center text-[10px] text-[var(--ink-4)]"
+        href="https://github.com/NanmiCoder/learn-deepseek-harness"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub · MIT
+      </a>
     </>
   );
 }
