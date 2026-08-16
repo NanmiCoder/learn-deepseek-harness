@@ -234,7 +234,7 @@ const answer = await ctx.get<Loop>('loop').run(first, '看看 notes.txt 写了�
     {
       wrong: "循环得认识模型和工具，才知道该找谁。",
       right:
-        "它只认名字。demo/mini-harness/loop.ts 开头两行是 ctx.get('model') 和 ctx.get('tools')，整个文件没 import 过任何一个具体的模型或工具。换掉背后的实现，循环一行都不用改。",
+        "它只认名字。demo/mini-harness/loop.ts 开头两行是 ctx.get('model') 和 ctx.get('tools')——ctx 是内核发给每件插件的专属把手，第 06 节细讲。整个文件没 import 过任何一个具体的模型或工具。换掉背后的实现，循环一行都不用改。",
     },
     {
       wrong: "一次对话就流过这几块，真实的也一样。",

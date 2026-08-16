@@ -281,7 +281,7 @@ for (const plugin of standard.use) kernel.use(plugin, standard.config[plugin.nam
     {
       wrong: "插件一拆，它干过的一切都会自动消失。",
       right:
-        "只有走 ctx 的那部分会。demo 最后拆掉计数插件，它塞进登记处的 count_files 还在——那笔注册没经过 ctx，插件自己也没写一句撤销。内核凭什么判断该收哪些，下一节讲。",
+        "只有走 ctx（内核发给每件插件的专属把手）的那部分会。demo 最后拆掉计数插件，它塞进登记处的 count_files 还在——那笔注册没经过 ctx，插件自己也没写一句撤销。内核凭什么判断该收哪些，下一节讲。",
     },
     {
       wrong: "既然一切皆插件，那 DeepSeek Harness 里什么都能换。",
@@ -374,7 +374,7 @@ for (const plugin of standard.use) kernel.use(plugin, standard.config[plugin.nam
       ],
       answer: 1,
       explain:
-        "循环只发起一个 tool/decide，把这次调用交给队列。审批插件用 ctx.intercept 排进去，看到危险工具就不调 next，后面的人和真正干活那段都不跑。",
+        "循环只发起一个 tool/decide，把这次调用交给队列。审批插件用 ctx.intercept（下一节细讲的拦截口子）排进去，看到危险工具就不调 next，后面的人和真正干活那段都不跑。",
       wrongExplains: [
         "内核里也搜不到 approval。它只管装卸和转发，手上没有任何一张权限表——把审批删掉，内核不会有任何反应。",
         "",
