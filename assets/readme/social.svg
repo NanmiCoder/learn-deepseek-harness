@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1280" height="640" viewBox="0 0 1280 640"
+     role="img" aria-labelledby="title desc">
+  <title id="title">读懂 DeepSeek Harness</title>
+  <desc id="desc">社交分享卡片：教程标题与节点图，循环到工具的连线被点亮。</desc>
+
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eef5f6"/>
+      <stop offset="1" stop-color="#e0ebec"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#paper)"/>
+
+  <!-- 左侧：标题区 -->
+  <g id="title-block" transform="translate(88 148)">
+    <text font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="19" letter-spacing="3" fill="#017a78">交互式教程 · 20 节 · 7 阶段</text>
+
+    <text y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="60" font-weight="700" fill="#014e60">读懂</text>
+    <text x="134" y="106" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          font-size="60" font-weight="700" fill="#019b98">DeepSeek Harness</text>
+
+    <text y="172" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="25" fill="#376f81">从「模型只会说话」开始，</text>
+    <text y="210" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="25" fill="#376f81">讲到你能写出一个装进真实 DSH 的插件。</text>
+
+    <g transform="translate(0 270)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18">
+      <rect x="0" y="-26" width="158" height="42" rx="21" fill="#019b98"/>
+      <text x="79" y="2" text-anchor="middle" fill="#ffffff">npm run dev</text>
+      <text x="182" y="2" fill="#436e7d">demo/ 下全部是能跑的真代码</text>
+    </g>
+
+    <text y="352" font-family="ui-monospace, SFMono-Regular, Menlo, monospace"
+          font-size="17" fill="#4b707e">learn-dsh.vercel.app · MIT</text>
+  </g>
+
+  <!-- 右侧：节点图 -->
+  <g id="stage-mini" transform="translate(816 158)">
+    <rect x="-16" y="-16" width="400" height="300" rx="20" fill="#ffffff" stroke="#dceaea"/>
+
+    <g stroke="#d3e2e4" stroke-width="2" fill="none">
+      <path d="M 96 210 C 130 180, 150 130, 178 100"/>
+      <path d="M 268 84 C 300 72, 314 70, 340 74"/>
+      <path d="M 268 110 C 300 150, 306 178, 334 194"/>
+    </g>
+    <path d="M 252 116 C 286 158, 296 180, 328 198" stroke="#019b98" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <circle cx="328" cy="198" r="5" fill="#019b98"/>
+
+    <g transform="translate(28 196)">
+      <rect width="96" height="52" rx="12" fill="#f4f8f9" stroke="#d3e2e4"/>
+      <text x="48" y="22" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="13" fill="#436e7d">外部</text>
+      <text x="48" y="40" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="15" font-weight="600" fill="#014e60">用户</text>
+    </g>
+
+    <g transform="translate(170 62)">
+      <rect width="104" height="56" rx="12" fill="#eefbfa" stroke="#019b98" stroke-width="2"/>
+      <text x="52" y="23" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="12" fill="#017a78">内核</text>
+      <text x="52" y="43" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="17" font-weight="700" fill="#014e60">循环</text>
+    </g>
+
+    <g transform="translate(272 48)">
+      <rect width="96" height="52" rx="12" fill="#f4f8f9" stroke="#d3e2e4"/>
+      <text x="48" y="22" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="13" fill="#436e7d">外部</text>
+      <text x="48" y="40" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="15" font-weight="600" fill="#014e60">大模型</text>
+    </g>
+
+    <g transform="translate(268 182)">
+      <rect width="104" height="56" rx="12" fill="#eefbfa" stroke="#019b98" stroke-width="2"/>
+      <text x="52" y="23" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="12" fill="#017a78">插件</text>
+      <text x="52" y="43" text-anchor="middle" font-family="-apple-system, 'PingFang SC', sans-serif" font-size="17" font-weight="700" fill="#014e60">工具</text>
+    </g>
+
+    <g transform="translate(140 250)">
+      <rect width="196" height="26" rx="13" fill="#d5f7f5"/>
+      <text x="98" y="17" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="12" fill="#017a78">循环 —调用→ 工具</text>
+    </g>
+  </g>
+</svg>
